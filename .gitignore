@@ -25,3 +25,4 @@ build
 test/executables/true
 test/executables/sleep
 test/executables/echo
+.DS_Store
