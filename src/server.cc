@@ -76,6 +76,7 @@
 #include "curl.h" /* curl shutdown */
 #include "background.h"
 #include "map.h"
+#include "ansi24.h"
 
 extern "C" {
 #include "dependencies/linenoise.h"
@@ -2361,8 +2362,10 @@ bf_name_lookup(Var arglist, Byte next, void *vdata, Objid progr)
 	return background_thread(name_lookup_callback, &arglist, human_string);
 }
 
+// Shared code that bf_notify() and bf_msg() will use.
+// They only differ in that bf_msg() will process ansi tags.
 static package
-bf_notify(Var arglist, Byte next, void *vdata, Objid progr)
+notify_and_msg_implementation(Var arglist, Byte next, void *vdata, Objid progr, bool is_msg)
 {				/* (player, string [, no_flush]) */
     Objid conn = arglist.v.list[1].v.obj;
     const char *line = arglist.v.list[2].v.str;
@@ -2379,26 +2382,54 @@ bf_notify(Var arglist, Byte next, void *vdata, Objid progr)
 	free_var(arglist);
 	return make_error_pack(E_PERM);
     }
+
+    size_t size       = strlen(line) * 2 + 1;   // esc sequences can be longer than tags
+    char *replacement = (char *) mymalloc((uint) size, M_STRING);
+    if (is_msg) {
+        replace_color_tags_with_ansi(replacement, size, line);
+    }
+    else {
+        strncpy(replacement, line, size);
+        replacement[size - 1] = 0;
+    }
+
     r.type = TYPE_INT;
     if (h && !h->disconnect_me) {
 	if (h->binary) {
 	    int length;
 
-	    line = binary_to_raw_bytes(line, &length);
-	    if (!line) {
-		free_var(arglist);
+	    replacement = (char *) binary_to_raw_bytes(replacement, &length);
+	    if (!replacement) {
+                free_str(replacement);
+                free_var(arglist);
 		return make_error_pack(E_INVARG);
 	    }
-	    r.v.num = network_send_bytes(h->nhandle, line, length, !no_flush);
+	    r.v.num = network_send_bytes(h->nhandle, replacement, length, !no_flush);
 	} else
-	    r.v.num = network_send_line(h->nhandle, line, !no_flush, !no_newline);
+	    r.v.num = network_send_line(h->nhandle, replacement, !no_flush, !no_newline);
     } else {
 	if (in_emergency_mode)
-	    emergency_notify(conn, line);
+	    emergency_notify(conn, replacement);
 	r.v.num = 1;
     }
+    free_str(replacement);
     free_var(arglist);
     return make_var_pack(r);
+}
+
+static package
+bf_notify(Var arglist, Byte next, void *vdata, Objid progr)
+{				/* (player, string [, no_flush]) */
+    // arglist freed in call to implementation code
+    return notify_and_msg_implementation(arglist, next, vdata, progr, false);
+}
+
+// Same as bf_notify() but with ansi color tag support
+static package
+bf_msg(Var arglist, Byte next, void *vdata, Objid progr)
+{				/* (player, string [, no_flush]) */
+    // arglist freed in call to implementation code
+    return notify_and_msg_implementation(arglist, next, vdata, progr, true);
 }
 
 static package
@@ -2665,6 +2696,7 @@ register_server(void)
     register_function("idle_seconds", 1, 1, bf_idle_seconds, TYPE_OBJ);
     register_function("connection_name", 1, 2, bf_connection_name, TYPE_OBJ, TYPE_INT);
     register_function("notify", 2, 4, bf_notify, TYPE_OBJ, TYPE_STR, TYPE_ANY, TYPE_ANY);
+    register_function("msg", 2, 4, bf_msg, TYPE_OBJ, TYPE_STR, TYPE_ANY, TYPE_ANY);
     register_function("boot_player", 1, 1, bf_boot_player, TYPE_OBJ);
     register_function("set_connection_option", 3, 3, bf_set_connection_option,
 		      TYPE_OBJ, TYPE_STR, TYPE_ANY);

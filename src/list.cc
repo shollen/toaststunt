@@ -42,6 +42,7 @@
 #include "server.h"
 #include "background.h"   // Threads
 #include "random.h"
+#include "ansi24.h"
 
 /* Bandaid: Something is killing all of our references to the
  * empty list, which is causing the server to crash. So this is
@@ -1157,9 +1158,16 @@ bf_tostr(Var arglist, Byte next, void *vdata, Objid progr)
 	for (i = 1; i <= arglist.v.list[0].v.num; i++) {
 	    stream_add_tostr(s, arglist.v.list[i]);
 	}
+
+    size_t size       = strlen(stream_contents(s)) * 2 + 1; // esc sequences can be longer than tags
+    char *replacement = (char *) mymalloc((uint) size, M_STRING);
+    replace_color_tags_with_ansi(replacement, size, stream_contents(s));
+
 	r.type = TYPE_STR;
-	r.v.str = str_dup(stream_contents(s));
+	r.v.str = str_dup(replacement);
 	p = make_var_pack(r);
+
+        free_str(replacement);
     }
     catch (stream_too_big& exception) {
 	p = make_space_pack();
