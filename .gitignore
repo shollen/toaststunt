@@ -26,3 +26,5 @@ test/executables/true
 test/executables/sleep
 test/executables/echo
 .DS_Store
+xcuserdata/
+!macos/moo
