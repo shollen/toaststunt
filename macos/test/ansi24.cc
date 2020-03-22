@@ -5,6 +5,8 @@
 //  Programming: Perpenso LLC, Tony Tribelli
 //
 
+#include <cctype>
+#include <cstdio>
 #include <algorithm>
 
 #ifdef _WIN32

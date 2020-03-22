@@ -8,6 +8,8 @@
 #ifndef ansi24_h
 #define ansi24_h
 
+#include <cstdint>
+
 enum ansi_modes { ansi_default,                 // Use global variable settings
                   ansi_fore, ansi_back,         // Foreground/background color
                   ansi_4  =  4,                 // Number of color bits
