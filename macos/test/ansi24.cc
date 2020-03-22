@@ -2042,10 +2042,10 @@ bf_ansi24_display_builtins(Var arglist, Byte next, void *vdata, Objid progr)
                         "Information:\n"
                         "ansi24_version           ()\n"
                         "                         --> TYPE_STR version\n"
-                        "ansi24_display_colors    ()\n"
-                        "                         --> TYPE_STR string displaying all colors\n"
                         "ansi24_display_builtins  ()\n"
                         "                         --> TYPE_STR available builtin functions\n"
+                        "ansi24_display_colors    ()\n"
+                        "                         --> TYPE_STR string displaying all colors\n"
                         "\n"
                         "Current modes:\n"
                         "ansi24_get_color_bits    ()\n"
@@ -2112,8 +2112,8 @@ void
 register_ansi24(void)
 {
     register_function("ansi24_version",           0,  0, bf_ansi24_version);
-    register_function("ansi24_display_colors",    0,  0, bf_ansi24_display_colors);
     register_function("ansi24_display_builtins",  0,  0, bf_ansi24_display_builtins);
+    register_function("ansi24_display_colors",    0,  0, bf_ansi24_display_colors);
     register_function("ansi24_get_color_bits",    0,  0, bf_ansi24_get_color_bits);
     register_function("ansi24_is_foreground",     0,  0, bf_ansi24_is_foreground);
     register_function("ansi24_set_color_bits",    1,  1, bf_ansi24_set_color_bits, TYPE_INT);

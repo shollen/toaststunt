@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		BB186A6723C12AB500221D97 /* test-ansi.cc in Sources */ = {isa = PBXBuildFile; fileRef = BB186A6523C12AB500221D97 /* test-ansi.cc */; };
 		BB186A6823C12AB500221D97 /* ansi24.cc in Sources */ = {isa = PBXBuildFile; fileRef = BB186A6623C12AB500221D97 /* ansi24.cc */; };
+		BB4094EE24275343002A4500 /* substring.cc in Sources */ = {isa = PBXBuildFile; fileRef = BB4094EC24275343002A4500 /* substring.cc */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -28,6 +29,8 @@
 		BB186A6423C12AB500221D97 /* ansi24.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ansi24.h; path = ../ansi24.h; sourceTree = SOURCE_ROOT; };
 		BB186A6523C12AB500221D97 /* test-ansi.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = "test-ansi.cc"; path = "../test-ansi.cc"; sourceTree = SOURCE_ROOT; };
 		BB186A6623C12AB500221D97 /* ansi24.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ansi24.cc; path = ../ansi24.cc; sourceTree = SOURCE_ROOT; };
+		BB4094EC24275343002A4500 /* substring.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = substring.cc; path = ../substring.cc; sourceTree = "<group>"; };
+		BB4094ED24275343002A4500 /* substring.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = substring.h; path = ../substring.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -60,7 +63,9 @@
 		BB186A5C23C12A9800221D97 /* test-ansi */ = {
 			isa = PBXGroup;
 			children = (
+				BB4094ED24275343002A4500 /* substring.h */,
 				BB186A6423C12AB500221D97 /* ansi24.h */,
+				BB4094EC24275343002A4500 /* substring.cc */,
 				BB186A6623C12AB500221D97 /* ansi24.cc */,
 				BB186A6523C12AB500221D97 /* test-ansi.cc */,
 			);
@@ -124,6 +129,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BB186A6823C12AB500221D97 /* ansi24.cc in Sources */,
+				BB4094EE24275343002A4500 /* substring.cc in Sources */,
 				BB186A6723C12AB500221D97 /* test-ansi.cc in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -248,6 +254,11 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CODE_SIGN_STYLE = Automatic;
 				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					NO_MOO_BUILTINS,
+					"$(inherited)",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -258,6 +269,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CODE_SIGN_STYLE = Automatic;
 				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_PREPROCESSOR_DEFINITIONS = NO_MOO_BUILTINS;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;

@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		BB290F21241EC91B00C2C0E0 /* gmcp.cc in Sources */ = {isa = PBXBuildFile; fileRef = BB290F1E241EC91A00C2C0E0 /* gmcp.cc */; };
+		BB290F22241EC91B00C2C0E0 /* msdp.cc in Sources */ = {isa = PBXBuildFile; fileRef = BB290F1F241EC91A00C2C0E0 /* msdp.cc */; };
+		BB290F23241EC91B00C2C0E0 /* mxp.cc in Sources */ = {isa = PBXBuildFile; fileRef = BB290F20241EC91A00C2C0E0 /* mxp.cc */; };
+		BB4094EA2427517F002A4500 /* protocols.cc in Sources */ = {isa = PBXBuildFile; fileRef = BB4094E82427517E002A4500 /* protocols.cc */; };
+		BB4094EB2427517F002A4500 /* substring.cc in Sources */ = {isa = PBXBuildFile; fileRef = BB4094E92427517E002A4500 /* substring.cc */; };
 		BB5AAF8E23A5D64200D531E1 /* crypto.cc in Sources */ = {isa = PBXBuildFile; fileRef = BB5AAF8023A5D64100D531E1 /* crypto.cc */; };
 		BB5AAF8F23A5D64200D531E1 /* curl.cc in Sources */ = {isa = PBXBuildFile; fileRef = BB5AAF8123A5D64100D531E1 /* curl.cc */; };
 		BB5AAF9023A5D64200D531E1 /* db_properties.cc in Sources */ = {isa = PBXBuildFile; fileRef = BB5AAF8223A5D64100D531E1 /* db_properties.cc */; };
@@ -104,6 +109,16 @@
 
 /* Begin PBXFileReference section */
 		BB1494F223E357460076FA8A /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = ../../build/config.h; sourceTree = SOURCE_ROOT; };
+		BB290F1B241EC8B100C2C0E0 /* gmcp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = gmcp.h; sourceTree = "<group>"; };
+		BB290F1C241EC8B100C2C0E0 /* mxp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mxp.h; sourceTree = "<group>"; };
+		BB290F1D241EC8B200C2C0E0 /* msdp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = msdp.h; sourceTree = "<group>"; };
+		BB290F1E241EC91A00C2C0E0 /* gmcp.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = gmcp.cc; sourceTree = "<group>"; };
+		BB290F1F241EC91A00C2C0E0 /* msdp.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = msdp.cc; sourceTree = "<group>"; };
+		BB290F20241EC91A00C2C0E0 /* mxp.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = mxp.cc; sourceTree = "<group>"; };
+		BB4094E624275131002A4500 /* protocols.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = protocols.h; sourceTree = "<group>"; };
+		BB4094E724275131002A4500 /* substring.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = substring.h; sourceTree = "<group>"; };
+		BB4094E82427517E002A4500 /* protocols.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = protocols.cc; sourceTree = "<group>"; };
+		BB4094E92427517E002A4500 /* substring.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = substring.cc; sourceTree = "<group>"; };
 		BB5AAF7623A5D60D00D531E1 /* moo */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = moo; sourceTree = BUILT_PRODUCTS_DIR; };
 		BB5AAF8023A5D64100D531E1 /* crypto.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = crypto.cc; path = ../../src/crypto.cc; sourceTree = SOURCE_ROOT; };
 		BB5AAF8123A5D64100D531E1 /* curl.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = curl.cc; path = ../../src/curl.cc; sourceTree = SOURCE_ROOT; };
@@ -344,6 +359,7 @@
 				BB5AAF9C23A5D65B00D531E1 /* fileio.cc */,
 				BB5AAF9F23A5D65B00D531E1 /* functions.cc */,
 				BB5AAF9D23A5D65B00D531E1 /* garbage.cc */,
+				BB290F1E241EC91A00C2C0E0 /* gmcp.cc */,
 				BB5AAFA023A5D65B00D531E1 /* http_parser.c */,
 				BB5AAFB023A5D67A00D531E1 /* json.cc */,
 				BB5AAFB123A5D67B00D531E1 /* keywords.gperf */,
@@ -351,6 +367,8 @@
 				BB5AAFB323A5D67B00D531E1 /* log.cc */,
 				BB5AAFD123A5D69E00D531E1 /* map.cc */,
 				BB5AAFD723A5D69F00D531E1 /* match.cc */,
+				BB290F1F241EC91A00C2C0E0 /* msdp.cc */,
+				BB290F20241EC91A00C2C0E0 /* mxp.cc */,
 				BB5AAFBD23A5D69900D531E1 /* net_bsd_tcp.cc */,
 				BB5AAFCC23A5D69D00D531E1 /* net_mp_poll.cc */,
 				BB5AAFB923A5D69800D531E1 /* net_mp_selct.cc */,
@@ -368,6 +386,7 @@
 				BB5AAFC223A5D69A00D531E1 /* pcre_moo.cc */,
 				BB5AAFBA23A5D69800D531E1 /* program.cc */,
 				BB5AAFB723A5D69800D531E1 /* property.cc */,
+				BB4094E82427517E002A4500 /* protocols.cc */,
 				BB5AAFDA23A5D6A000D531E1 /* quota.cc */,
 				BB5AAFBC23A5D69900D531E1 /* regexpr.c */,
 				BB5AAFC623A5D69B00D531E1 /* server.cc */,
@@ -377,6 +396,7 @@
 				BB5AAFBE23A5D69900D531E1 /* storage.cc */,
 				BB5AAFD023A5D69E00D531E1 /* str_intern.cc */,
 				BB5AAFC923A5D69C00D531E1 /* streams.cc */,
+				BB4094E92427517E002A4500 /* substring.cc */,
 				BB5AAFCE23A5D69D00D531E1 /* sym_table.cc */,
 				BB5AAFCD23A5D69D00D531E1 /* system.cc */,
 				BB5AAFC123A5D69A00D531E1 /* tasks.cc */,
@@ -417,6 +437,7 @@
 				BB5AB02423A5D6F500D531E1 /* fileio.h */,
 				BB5AB04023A5D6F900D531E1 /* functions.h */,
 				BB5AB02B23A5D6F600D531E1 /* garbage.h */,
+				BB290F1B241EC8B100C2C0E0 /* gmcp.h */,
 				BB5AB02123A5D6F500D531E1 /* http_parser.h */,
 				BB5AB02623A5D6F500D531E1 /* json.h */,
 				BB5AB03423A5D6F700D531E1 /* keywords.h */,
@@ -424,6 +445,8 @@
 				BB5AB00C23A5D6F200D531E1 /* log.h */,
 				BB5AB01423A5D6F300D531E1 /* map.h */,
 				BB5AB00823A5D6F200D531E1 /* match.h */,
+				BB290F1D241EC8B200C2C0E0 /* msdp.h */,
+				BB290F1C241EC8B100C2C0E0 /* mxp.h */,
 				BB5AB01E23A5D6F400D531E1 /* my-math.h */,
 				BB5AB03523A5D6F700D531E1 /* net_mplex.h */,
 				BB5AB00F23A5D6F300D531E1 /* net_multi.h */,
@@ -437,6 +460,7 @@
 				BB5AB01223A5D6F300D531E1 /* pattern.h */,
 				BB5AB01723A5D6F400D531E1 /* pcre_moo.h */,
 				BB5AB02A23A5D6F600D531E1 /* program.h */,
+				BB4094E624275131002A4500 /* protocols.h */,
 				BB5AB01323A5D6F300D531E1 /* quota.h */,
 				BB5AB03023A5D6F700D531E1 /* random.h */,
 				BB5AB01823A5D6F400D531E1 /* regexpr.h */,
@@ -447,6 +471,7 @@
 				BB5AB03823A5D6F800D531E1 /* str_intern.h */,
 				BB5AB03D23A5D6F800D531E1 /* streams.h */,
 				BB5AB02323A5D6F500D531E1 /* structures.h */,
+				BB4094E724275131002A4500 /* substring.h */,
 				BB5AB00A23A5D6F200D531E1 /* sym_table.h */,
 				BB5AB00E23A5D6F300D531E1 /* system.h */,
 				BB5AB01923A5D6F400D531E1 /* tasks.h */,
@@ -621,10 +646,13 @@
 				BB5AAFE023A5D6A100D531E1 /* objects.cc in Sources */,
 				BB5AAFF523A5D6A100D531E1 /* str_intern.cc in Sources */,
 				BB5AAF9223A5D64200D531E1 /* decompile.cc in Sources */,
+				BB290F21241EC91B00C2C0E0 /* gmcp.cc in Sources */,
+				BB4094EA2427517F002A4500 /* protocols.cc in Sources */,
 				BB5AAFF923A5D6A100D531E1 /* network.cc in Sources */,
 				BB5AAFAB23A5D65D00D531E1 /* eval_env.cc in Sources */,
 				BB5AB04723A5D73900D531E1 /* pcrs.c in Sources */,
 				BB5AB06723A5D78400D531E1 /* yajl_version.c in Sources */,
+				BB290F22241EC91B00C2C0E0 /* msdp.cc in Sources */,
 				BB5AAFAD23A5D65D00D531E1 /* eval_vm.cc in Sources */,
 				BB5AAFE623A5D6A100D531E1 /* tasks.cc in Sources */,
 				BB5AAFA623A5D65D00D531E1 /* fileio.cc in Sources */,
@@ -656,6 +684,8 @@
 				BB5AAF9123A5D64200D531E1 /* db_verbs.cc in Sources */,
 				BB5AAFE223A5D6A100D531E1 /* net_bsd_tcp.cc in Sources */,
 				BB5AAFFF23A5D6A100D531E1 /* quota.cc in Sources */,
+				BB290F23241EC91B00C2C0E0 /* mxp.cc in Sources */,
+				BB4094EB2427517F002A4500 /* substring.cc in Sources */,
 				BB5AAF9023A5D64200D531E1 /* db_properties.cc in Sources */,
 				BB5AAFEF23A5D6A100D531E1 /* timers.cc in Sources */,
 				BB5AB05023A5D74E00D531E1 /* strnatcmp.c in Sources */,

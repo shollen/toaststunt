@@ -126,6 +126,23 @@ replace_substring(char       *replacement,
 #ifndef NO_MOO_BUILTINS
 
 // -----------------------------------------------------------------------------
+// Identify the package and version
+// Return:  TYPE_STR version
+// Testing: ;player:tell(substring_version())
+static package
+bf_substring_version(Var arglist, Byte next, void *vdata, Objid progr)
+{
+    Var  rv;
+
+    // Package informaion and version
+    rv.type  = TYPE_STR;
+    rv.v.str = str_dup("substring 1.0.0");
+    
+    free_var(arglist);
+    return make_var_pack(rv);
+}
+
+// -----------------------------------------------------------------------------
 // Replace one substring with another
 // Arguments: TYPE_STR orginal string
 //            TYPE_STR substring to search for
@@ -159,11 +176,45 @@ bf_replace_substring(Var arglist, Byte next, void *vdata, Objid progr) {
 }
 
 // -----------------------------------------------------------------------------
+// Display the builtin functions, arguments and return values
+// Returns: TYPE_STR string with builtin descriptions
+//          TYPE_ERR E_RANGE Internal buffer too small
+// Testing: ;player:tell(substring_display_builtins())
+static package
+bf_substring_display_builtins(Var arglist, Byte next, void *vdata, Objid progr)
+{
+    Var        rv;
+    const char info[] = "substring Builtin Functions\n"
+                        "\n"
+                        "Information:\n"
+                        "substring_version          ()\n"
+                        "                           --> TYPE_STR version\n"
+                        "substring_display_builtins ()\n"
+                        "                           --> TYPE_STR available builtin functions\n"
+                        "\n"
+                        "Substring replacement and removal:\n"
+                        "replace_substring          (TYPE_STR orginal string\n"
+                        "                            TYPE_STR substring to search for\n"
+                        "                            TYPE_STR substring to replace matches with,\n"
+                        "                                     \"\" to remove substring)\n"
+                        "                           --> TYPE_STR updated string\n"
+                        "                           --> TYPE_ERR E_RANGE\n";
+
+    rv.type  = TYPE_STR;
+    rv.v.str = str_dup(info);
+    
+    free_var(arglist);
+    return make_var_pack(rv);
+}
+
+// -----------------------------------------------------------------------------
 // Make our public builtins accessible
 void
 register_substring(void)
 {
-    register_function("replace_substring", 3,  3, bf_replace_substring, TYPE_STR, TYPE_STR, TYPE_STR);
+    register_function("substring_version",          0,  0, bf_substring_version);
+    register_function("substring_display_builtins", 0,  0, bf_substring_display_builtins);
+    register_function("replace_substring",          3,  3, bf_replace_substring, TYPE_STR, TYPE_STR, TYPE_STR);
 }
 
 #endif  // NO_MOO_BUILTINS
