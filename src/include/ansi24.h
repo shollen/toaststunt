@@ -8,16 +8,6 @@
 #ifndef ansi24_h
 #define ansi24_h
 
-#include <cstdint>
-#include <cstddef>
-#include <cstdarg>
-
-#ifdef _WIN32
-#define STRCASESTR StrStrI
-#else
-#define STRCASESTR strcasestr
-#endif
-
 enum ansi_modes { ansi_default,                 // Use global variable settings
                   ansi_fore, ansi_back,         // Foreground/background color
                   ansi_4  =  4,                 // Number of color bits
@@ -81,23 +71,6 @@ bool remove_color_tags            (char       *replacement,
 bool remove_ansi_sequences        (char       *replacement,
                                    size_t     size,
                                    const char *original);
-
-// -----------------------------------------------------------------------------
-// Replace or remove a substring
-
-bool replace_substring (char       *replacement,
-                        size_t     size,
-                        const char *original,
-                        const char *find,
-                        const char *replace = "");  // Empty to remove substr
-
-inline
-bool remove_substring (char       *replacement,
-                       size_t     size,
-                       const char *original,
-                       const char *find) {
-    return replace_substring(replacement, size, original, find);
-}
 
 // -----------------------------------------------------------------------------
 // Show the supported named colors and the 8-bit palette

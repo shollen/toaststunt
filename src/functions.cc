@@ -75,7 +75,9 @@ static registry bi_function_registries[] =
     register_argon2,
     register_spellcheck,
     register_curl,
-    register_ansi24
+    register_substring,
+    register_ansi24,
+    register_protocols
 };
 
 void

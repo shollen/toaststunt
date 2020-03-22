@@ -12,12 +12,12 @@
 //                  chcp 65001
 
 #include <iostream>
-#include <cstring>
 
 #ifdef _WIN32
 #include <windows.h>
 #endif
 
+#include "substring.h"
 #include "ansi24.h"
 
 using namespace std;

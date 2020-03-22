@@ -5,21 +5,16 @@
 //  Programming: Perpenso LLC, Tony Tribelli
 //
 
-#define MOO_BUILTINS 0  // Define builtin functions available to MOO code
-
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <cctype>
 #include <algorithm>
 
 #ifdef _WIN32
 #include <shlwapi.h>
 #endif
 
+#include "substring.h"
 #include "ansi24.h"
 
-#if MOO_BUILTINS
+#ifndef NO_MOO_BUILTINS
 #include "functions.h"
 #include "utils.h"
 #endif
@@ -38,30 +33,6 @@ template <typename T, size_t N>
 constexpr size_t numElements(const T(&)[N])
 {
     return N;
-}
-
-// -----------------------------------------------------------------------------
-// We're going to test size, copy characers, update pointer and size
-// a few times so make it a function
-// Returns: true  Substring was copied
-//          false Error
-inline bool
-copy_substring(char *&dest, size_t &size, const char *src, size_t len)
-{
-    // This is a private function so its safe to require that
-    // pointers have been checked for null by caller
-    
-    bool successful = false;
-    
-    if (size > len) {
-        memcpy(dest, src, len);
-        dest[len]   = 0;
-        dest       += len;
-        size       -= len;
-        successful  = true;
-    }
-    
-    return successful;
 }
 
 // ----------------------------------------------------------------------------
@@ -1062,113 +1033,6 @@ remove_ansi_sequences(char       *replacement,
 
 
 // -----------------------------------------------------------------------------
-// Replace one substring with another or remove the substring
-// -----------------------------------------------------------------------------
-
-// -----------------------------------------------------------------------------
-// This private function is used to implement both
-// replace_substring() and remove_substring().
-// Note removing a substring is really replacing it with "".
-// Returns: true  Any existing substring was replaced or removed
-//          false Error
-static bool
-replace_remove_substring(char       *replacement,
-                         size_t     size,
-                         const char *original,
-                         const char *find,
-                         const char *replace)
-{
-    bool successful = false;
-
-    // Make sure we have all the strings and that the replacemnt buffer
-    // is at least the size of the original with termination.
-    // That's propbably not large enough if substitutions are made
-    // but if there are none and the string is just a copy it will fit.
-    // Also make sure we are searching for a non-empty substring.
-    if (   replacement  != nullptr
-        && original     != nullptr
-        && find         != nullptr
-        && replace      != nullptr
-        && size          > strlen(original)
-        && strlen(find)  > 0) {
-        size_t     find_len    = strlen(find);
-        size_t     replace_len = strlen(replace);
-        const char *found;
-        
-        // Process the next match
-        while ((found = STRCASESTR(original, find)) != nullptr) {
-            // Copy the text before the match
-            size_t leading_len = found - original;
-            if (copy_substring(replacement, size, original, leading_len)) {
-                // Move source pointer past the copied text
-                // and the substring being searched for
-                original += leading_len + find_len;
-            }
-            // Buffer too small
-            else
-                break;
-            
-            // Insert the replacement text
-            if (copy_substring(replacement, size, replace, replace_len)) {
-            }
-            // Buffer too small
-            else
-                break;
-        }
-        
-        // Copy the rest of the text
-        successful = copy_substring(replacement,
-                                    size,
-                                    original,
-                                    strlen(original));
-    }
-    
-    return successful;
-}
-
-// -----------------------------------------------------------------------------
-// Replace one substring with another.
-// Note removing a substring is really replacing it with "".
-// Returns: true  Any existing substring was replaced
-//          false Error
-bool
-replace_substring(char       *replacement,
-                  size_t     size,
-                  const char *original,
-                  const char *find,
-                  const char *replace)
-{
-    bool successful = false;
-    
-    // Buffers are the same so create a temporary.
-    // New substrings can be longer than old substrings so there is
-    // an overwrite hazard for in place replacement.
-    if (replacement == original) {
-        char *buffer = new char[size];
-        
-        successful = replace_remove_substring(buffer,
-                                              size,
-                                              original,
-                                              find,
-                                              replace);
-        strncpy(replacement, buffer, size);
-        replacement[size - 1] = 0;
-        
-        delete[] buffer;
-    }
-    else
-        successful = replace_remove_substring(replacement,
-                                              size,
-                                              original,
-                                              find,
-                                              replace);
-
-    return successful;
-}
-
-
-
-// -----------------------------------------------------------------------------
 // Display the named colors and the 8-bit palette
 // -----------------------------------------------------------------------------
 
@@ -1446,9 +1310,11 @@ format_char(char       *buffer,
         && format != nullptr
         && size    > 0) {
         // If no formatting its safe to process the value
-        // as a utf-8 codepoint
+        // as a utf-8 codepoint.
+        // Do not process ascii or extended ascii as a codepoint.
         if (   *format       == '%'
-            && *(format + 1) == 'c') {
+            && *(format + 1) == 'c'
+            && character     >= 256) {
             uint8_t utf8[8];
             
             // Output the utf-8 multibyte sequence as a string
@@ -1467,120 +1333,7 @@ format_char(char       *buffer,
 
 
 
-// -----------------------------------------------------------------------------
-// Builtins for the moo code
-//
-// ansi24_version           () --> TYPE_STR version
-// ansi24_get_color_bits    () --> TYPE_INT color bits = { 4, 8, 24 }
-// ansi24_is_foreground     () --> TYPE_INT foreground = 1, background = 0
-// ansi24_set_color_bits    (TYPE_INT color bits = { 4, 8, 24 })
-//                          --> TYPE_INT current setting = { 4, 8, 24 }
-//                          --> TYPE_ERR E_RANGE
-// ansi24_set_foreground    (TYPE_INT foreground = { true, false })
-//                          --> TYPE_INT current setting = { 1, 0 }
-// ansi24_named_sequence    (TYPE_STR color name,
-//                           {optional} TYPE_INT foreground = { 1, 0 },
-//                           {optional} TYPE_INT color bits = { 4, 8, 24 })
-//                          --> TYPE_STR ansi escape sequence
-//                          --> TYPE_ERR E_RANGE
-// ansi24_4bit_sequence     (TYPE_INT ansi SGR code = { 0..255 })
-//                          --> TYPE_STR ansi escape sequence
-//                          --> TYPE_ERR E_RANGE
-// ansi24_8bit_sequence     (TYPE_INT ansi palette index = { 0..255 },
-//                           {optional} TYPE_INT foreground = { 1, 0 }),
-//                          --> TYPE_STR ansi escape sequence
-//                          --> TYPE_ERR E_RANGE
-// ansi24_24bit_sequence    (TYPE_INT red   component = { 0..255 },
-//                           TYPE_INT green component = { 0..255 },
-//                           TYPE_INT blue  component = { 0..255 },
-//                           {optional} TYPE_INT foreground = { 1, 0 }),
-//                          --> TYPE_STR ansi escape sequence
-//                          --> TYPE_ERR E_RANGE
-// ansi24_replace_tags      (TYPE_STR string with color tags)
-//                          --> TYPE_STR string with ansi escape sequences
-//                          --> TYPE_ERR E_RANGE
-// ansi24_remove_tags       (TYPE_STR string with color tags)
-//                          --> TYPE_STR string with no color tags
-//                          --> TYPE_ERR E_RANGE
-// ansi24_remove_sequences  (TYPE_STR string with ansi escape sequences)
-//                          --> TYPE_STR string with no ansi escape sequences
-//                          --> TYPE_ERR E_RANGE
-// ansi24_replace_substring (TYPE_STR orginal string
-//                           TYPE_STR substring to search for
-//                           TYPE_STR substring to replace matches with)
-//                          --> TYPE_STR updated string
-//                          --> TYPE_ERR E_RANGE
-// ansi24_display_colors    () --> TYPE_STR string displaying all colors
-//                          --> TYPE_ERR E_RANGE
-// ansi24_printf            (TYPE_STR format string,
-//                           ... { argument list })
-//                          --> TYPE_STR output string
-//                          --> TYPE_ERR E_ARGS  Argument type not supported
-//                          --> TYPE_ERR E_EXEC  Encoding failed
-//                          --> TYPE_ERR E_RANGE Output too long
-//
-// color names
-// Note some are really attributes not colors themselves.
-// Also note some have aliases
-//   4-bit and above:
-//     "black"
-//     "red"
-//     "green"
-//     "yellow"
-//     "blue"
-//     "magenta", "purple"
-//     "cyan"
-//     "white"
-//     "bblack", "gray", "grey"
-//     "bred"
-//     "bgreen"
-//     "byellow"
-//     "bblue"
-//     "bmagenta", "bpurple"
-//     "bcyan"
-//     "bwhite"
-//     "normal"
-//     "bold", "bright"
-//     "faint"
-//     "under", "underline"
-//     "blink"
-//     "inverse", "reverse"
-//     "nobold", "nobright" "nofaint" "unbold", "unbright" "unfaint"
-//     "nounder"
-//     "noblink", "unblink"
-//     "noinv"
-//     "4-bit"
-//     "8-bit"
-//     "24-bit"
-//     "fg"
-//     "bg"
-//   8-bit and above:
-//     "azure"
-//     "jade"
-//     "violet"
-//     "lime"
-//     "tan"
-//     "silver"
-//     "pink"
-//     "orange"
-//     "bazure"
-//     "bjade"
-//     "bviolet"
-//     "blime"
-//     "btan"
-//     "bsilver"
-//     "bpink"
-//     "borange"
-//   color tag = "[color name]"
-//   Example: "[red]"
-//
-// string substitution names
-//     "esc" --> "\x1b"
-//   substitution tag = "[substitution name]"
-//   Example: "[esc]"
-// -----------------------------------------------------------------------------
-
-#if MOO_BUILTINS
+#ifndef NO_MOO_BUILTINS
 
 // -----------------------------------------------------------------------------
 // Identify the package and version
@@ -1593,7 +1346,7 @@ bf_ansi24_version(Var arglist, Byte next, void *vdata, Objid progr)
 
     // Package informaion and version
     rv.type  = TYPE_STR;
-    rv.v.str = str_dup("ansi24 1.0.0");
+    rv.v.str = str_dup("ansi24 1.0.2");
     
     free_var(arglist);
     return make_var_pack(rv);
@@ -1713,7 +1466,7 @@ bf_ansi24_set_color_bits(Var arglist, Byte next, void *vdata, Objid progr)
 
 // -----------------------------------------------------------------------------
 // Get the default ansi foreground/background mode
-// Arguments: TYPE_INT foreground = { true, false }
+// Arguments: TYPE_INT foreground = { 1, 0 }
 // Return:    TYPE_INT current setting = { 1, 0 }
 // Testing:   ;player:tell(tostr(ansi24_set_foreground(1)))
 //            ;player:tell(tostr(ansi24_is_foreground()))
@@ -1735,20 +1488,20 @@ bf_ansi24_set_foreground(Var arglist, Byte next, void *vdata, Objid progr)
 // -----------------------------------------------------------------------------
 // Create an ansi escape sequence from a name or a numeric value
 // Arguments: (TYPE_STR color name or numeric value
-//            {optional} TYPE_INT foreground = { true, false }
+//            {optional} TYPE_INT foreground = { 1, 0 }
 //            {optional} TYPE_INT color bits = { 4, 8, 24 }
 // Returns:   TYPE_STR ansi escape sequence
 //            TYPE_ERR E_RANGE
 // Testing:   ;player:tell(tostr(ansi24_set_color_bits(4)))
 //            ;player:tell(tostr(ansi24_set_foreground(1)))
-//            ;player:tell(ansi24_replace_substring(ansi24_named_sequence("red"), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_named_sequence("red"), chr(27), "{esc}"))
 //            ;player:tell(tostr(ansi24_set_color_bits(8)))
-//            ;player:tell(ansi24_replace_substring(ansi24_named_sequence("red", 0), chr(27), "{esc}"))
-//            ;player:tell(ansi24_replace_substring(ansi24_named_sequence("red", 1, 24), chr(27), "{esc}"))
-//            ;player:tell(ansi24_replace_substring(ansi24_named_sequence("red", 1, 42), chr(27), "{esc}"))
-//            ;player:tell(ansi24_replace_substring(ansi24_named_sequence("1", 1, 4), chr(27), "{esc}"))
-//            ;player:tell(ansi24_replace_substring(ansi24_named_sequence("1", 1, 8), chr(27), "{esc}"))
-//            ;player:tell(ansi24_replace_substring(ansi24_named_sequence("191.0.0", 1, 24), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_named_sequence("red", 0), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_named_sequence("red", 1, 24), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_named_sequence("red", 1, 42), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_named_sequence("1", 1, 4), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_named_sequence("1", 1, 8), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_named_sequence("191.0.0", 1, 24), chr(27), "{esc}"))
 static package
 bf_ansi24_named_sequence(Var arglist, Byte next, void *vdata, Objid progr)
 {
@@ -1782,8 +1535,8 @@ bf_ansi24_named_sequence(Var arglist, Byte next, void *vdata, Objid progr)
 // Returns:   TYPE_STR ansi escape sequence
 //            TYPE_ERR E_RANGE
 // Testing:   ;player:tell(tostr(ansi24_set_foreground(1)))
-//            ;player:tell(ansi24_replace_substring(ansi24_4bit_sequence(32), chr(27), "{esc}"))
-//            ;player:tell(ansi24_replace_substring(ansi24_4bit_sequence(256), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_4bit_sequence(32), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_4bit_sequence(256), chr(27), "{esc}"))
 
 static package
 bf_ansi24_4bit_sequence(Var arglist, Byte next, void *vdata, Objid progr)
@@ -1810,14 +1563,14 @@ bf_ansi24_4bit_sequence(Var arglist, Byte next, void *vdata, Objid progr)
 // -----------------------------------------------------------------------------
 // Create an ansi escape sequence from a numeric value
 // Arguments: TYPE_INT ansi palette index = { 0..255 }
-//            {optional} TYPE_INT foreground = { true, false }
+//            {optional} TYPE_INT foreground = { 1, 0 }
 // Returns:   TYPE_STR ansi escape sequence
 //            TYPE_ERR E_RANGE
 // Testing:   ;player:tell(tostr(ansi24_set_foreground(1)))
-//            ;player:tell(ansi24_replace_substring(ansi24_8bit_sequence(2), chr(27), "{esc}"))
-//            ;player:tell(ansi24_replace_substring(ansi24_8bit_sequence(2, 42), chr(27), "{esc}"))
-//            ;player:tell(ansi24_replace_substring(ansi24_8bit_sequence(2, 0), chr(27), "{esc}"))
-//            ;player:tell(ansi24_replace_substring(ansi24_8bit_sequence(256), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_8bit_sequence(2), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_8bit_sequence(2, 42), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_8bit_sequence(2, 0), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_8bit_sequence(256), chr(27), "{esc}"))
 static package
 bf_ansi24_8bit_sequence(Var arglist, Byte next, void *vdata, Objid progr)
 {
@@ -1849,16 +1602,16 @@ bf_ansi24_8bit_sequence(Var arglist, Byte next, void *vdata, Objid progr)
 // Arguments: TYPE_INT red   component = { 0..255 }
 //            TYPE_INT green component = { 0..255 }
 //            TYPE_INT blue  component = { 0..255 }
-//            {optional} TYPE_INT foreground = { true, false }
+//            {optional} TYPE_INT foreground = { 1, 0 }
 // Returns:   TYPE_STR ansi escape sequence
 //            TYPE_ERR E_RANGE
 // Testing:   ;player:tell(tostr(ansi24_set_foreground(1)))
-//            ;player:tell(ansi24_replace_substring(ansi24_24bit_sequence(191, 0, 0), chr(27), "{esc}"))
-//            ;player:tell(ansi24_replace_substring(ansi24_24bit_sequence(0, 191, 0, 42), chr(27), "{esc}"))
-//            ;player:tell(ansi24_replace_substring(ansi24_24bit_sequence(0, 0, 191, 0), chr(27), "{esc}"))
-//            ;player:tell(ansi24_replace_substring(ansi24_24bit_sequence(256, 0, 0), chr(27), "{esc}"))
-//            ;player:tell(ansi24_replace_substring(ansi24_24bit_sequence(0, 256, 0), chr(27), "{esc}"))
-//            ;player:tell(ansi24_replace_substring(ansi24_24bit_sequence(0, 0, 256), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_24bit_sequence(191, 0, 0), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_24bit_sequence(0, 191, 0, 42), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_24bit_sequence(0, 0, 191, 0), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_24bit_sequence(256, 0, 0), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_24bit_sequence(0, 256, 0), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_24bit_sequence(0, 0, 256), chr(27), "{esc}"))
 static package
 bf_ansi24_24bit_sequence(Var arglist, Byte next, void *vdata, Objid progr)
 {
@@ -1964,42 +1717,9 @@ bf_ansi24_remove_sequences(Var arglist, Byte next, void *vdata, Objid progr)
 }
 
 // -----------------------------------------------------------------------------
-// Replace one substring with another
-// Arguments: TYPE_STR orginal string
-//            TYPE_STR substring to search for
-//            TYPE_STR substring to replace matches with
-// Returns:   TYPE_STR updated string
-//            TYPE_ERR E_RANGE
-// Testing:   ;player:tell(ansi24_replace_substring(ansi24_replace_tags("The [red]red dog[normal] [bright][blink]barks[normal]."), "barks", "wags its tail"))
-static package
-bf_ansi24_replace_substring(Var arglist, Byte next, void *vdata, Objid progr) {
-    Var        rv;
-    const char *original = arglist.v.list[1].v.str;
-    const char *find     = arglist.v.list[2].v.str;
-    const char *replace  = arglist.v.list[3].v.str;
-    char       replacement[256];
-    
-    if (replace_substring(replacement,
-                          sizeof(replacement),
-                          original,
-                          find,
-                          replace)) {
-        rv.type  = TYPE_STR;
-        rv.v.str = str_dup(replacement);
-    }
-    else {
-        free_var(arglist);
-        return make_error_pack(E_RANGE);
-    }
-    
-    free_var(arglist);
-    return make_var_pack(rv);
-}
-
-// -----------------------------------------------------------------------------
 // Display the named colors and the 8-bit palette
 // Returns: TYPE_STR string displaying all colors
-//          TYPE_ERR E_RANGE
+//          TYPE_ERR E_RANGE Internal buffer too small
 // Testing: ;player:tell(ansi24_display_colors())
 static package
 bf_ansi24_display_colors(Var arglist, Byte next, void *vdata, Objid progr)
@@ -2022,8 +1742,10 @@ bf_ansi24_display_colors(Var arglist, Byte next, void *vdata, Objid progr)
 
 // -----------------------------------------------------------------------------
 // Wrapper around snprintf
-// Arguments: TYPE_STR format string
-//            ... { argument list }
+// Arguments: TYPE_STR format string - note a plain %c with no
+//                     formatting will accept unicode code point
+//                     values and %s is unicode utf-8 compatible
+//            ... { argument list of TYPE_STR, TYPE_INT and TYPE_FLOAT }
 // Returns:   TYPE_STR output string
 //            TYPE_ERR E_ARGS  Argument type not supported
 //            TYPE_ERR E_EXEC  Encoding failed
@@ -2038,6 +1760,7 @@ bf_ansi24_display_colors(Var arglist, Byte next, void *vdata, Objid progr)
 //            ;player:tell(ansi24_printf("It was nighttime."))
 //            ;player:tell(tostr(ansi24_printf("It was a [gray]%s[normal] and %s night.", "dark", "stormy")))
 //            ;player:tell(ansi24_printf("%%c UTF-8 test = 1 byte: %c  2 byte: %c  3 byte: %c  4 byte: %c  Not UTF-8: %3c", 36, 162, 8364, 66376, 36))
+//            ;player:tell(ansi24_printf("%%s UTF-8 test = %s", "1 byte: $  2 byte: ¢  3 byte: €  4 byte: 𐍈"))
 static package
 bf_ansi24_printf(Var arglist, Byte next, void *vdata, Objid progr) {
     Var        rv;
@@ -2300,12 +2023,97 @@ bf_ansi24_printf(Var arglist, Byte next, void *vdata, Objid progr) {
 }
 
 // -----------------------------------------------------------------------------
+// Display the builtin functions, arguments and return values
+// Returns: TYPE_STR string with builtin descriptions
+//          TYPE_ERR E_RANGE Internal buffer too small
+// Testing: ;player:tell(ansi24_display_builtins())
+static package
+bf_ansi24_display_builtins(Var arglist, Byte next, void *vdata, Objid progr)
+{
+    Var        rv;
+    const char info[] = "ansi24 Builtin Functions\n"
+                        "\n"
+                        "color tags = [color name], ex: [red]\n"
+                        "           = [4-bit SGR code], ex: [31]\n"
+                        "           = [8-bit palette index], ex: [1]\n"
+                        "           = [24-bit RGB dotted triple], ex: [255.0.0]\n"
+                        "Use ansi24_display_colors() to see all named colors\n"
+                        "\n"
+                        "Information:\n"
+                        "ansi24_version           ()\n"
+                        "                         --> TYPE_STR version\n"
+                        "ansi24_display_colors    ()\n"
+                        "                         --> TYPE_STR string displaying all colors\n"
+                        "ansi24_display_builtins  ()\n"
+                        "                         --> TYPE_STR available builtin functions\n"
+                        "\n"
+                        "Current modes:\n"
+                        "ansi24_get_color_bits    ()\n"
+                        "                         --> TYPE_INT color bits = { 4, 8, 24 }\n"
+                        "ansi24_is_foreground     ()\n"
+                        "                         --> TYPE_INT foreground = 1, background = 0\n"
+                        "ansi24_set_color_bits    (TYPE_INT color bits = { 4, 8, 24 })\n"
+                        "                         --> TYPE_INT current setting = { 4, 8, 24 }\n"
+                        "                         --> TYPE_ERR E_RANGE\n"
+                        "ansi24_set_foreground    (TYPE_INT foreground = { 1, 0 })\n"
+                        "                         --> TYPE_INT current setting = { 1, 0 }\n"
+                        "\n"
+                        "Creating ansi escape sequences:\n"
+                        "ansi24_named_sequence    (TYPE_STR color name,\n"
+                        "                          {optional} TYPE_INT foreground = { 1, 0 },\n"
+                        "                          {optional} TYPE_INT color bits = { 4, 8, 24 })\n"
+                        "                         --> TYPE_STR ansi escape sequence\n"
+                        "                         --> TYPE_ERR E_RANGE\n"
+                        "ansi24_4bit_sequence     (TYPE_INT ansi SGR code = { 0..255 })\n"
+                        "                         --> TYPE_STR ansi escape sequence\n"
+                        "                         --> TYPE_ERR E_RANGE\n"
+                        "ansi24_8bit_sequence     (TYPE_INT ansi palette index = { 0..255 },\n"
+                        "                          {optional} TYPE_INT foreground = { 1, 0 }),\n"
+                        "                         --> TYPE_STR ansi escape sequence\n"
+                        "                         --> TYPE_ERR E_RANGE\n"
+                        "ansi24_24bit_sequence    (TYPE_INT red   component = { 0..255 },\n"
+                        "                          TYPE_INT green component = { 0..255 },\n"
+                        "                          TYPE_INT blue  component = { 0..255 },\n"
+                        "                          {optional} TYPE_INT foreground = { 1, 0 }),\n"
+                        "                         --> TYPE_STR ansi escape sequence\n"
+                        "                         --> TYPE_ERR E_RANGE\n"
+                        "\n"
+                        "Substring replacement and removal:\n"
+                        "ansi24_replace_tags      (TYPE_STR string with color tags)\n"
+                        "                         --> TYPE_STR string with ansi escape sequences\n"
+                        "                         --> TYPE_ERR E_RANGE\n"
+                        "ansi24_remove_tags       (TYPE_STR string with color tags)\n"
+                        "                         --> TYPE_STR string with no color tags\n"
+                        "                         --> TYPE_ERR E_RANGE\n"
+                        "ansi24_remove_sequences  (TYPE_STR string with ansi escape sequences)\n"
+                        "                         --> TYPE_STR string with no ansi escape sequences\n"
+                        "                         --> TYPE_ERR E_RANGE\n"
+                        "\n"
+                        "Formatting:\n"
+                        "ansi24_printf            (TYPE_STR format string - note a plain %c with no\n"
+                        "                                   formatting will accept unicode code point\n"
+                        "                                   values and %s is unicode utf-8 compatible\n"
+                        "                          ... { argument list of TYPE_STR, TYPE_INT and TYPE_FLOAT })\n"
+                        "                         --> TYPE_STR output string\n"
+                        "                         --> TYPE_ERR E_ARGS  Argument type not supported\n"
+                        "                         --> TYPE_ERR E_EXEC  Encoding failed\n"
+                        "                         --> TYPE_ERR E_RANGE Output too long";
+    
+    rv.type  = TYPE_STR;
+    rv.v.str = str_dup(info);
+    
+    free_var(arglist);
+    return make_var_pack(rv);
+}
+
+// -----------------------------------------------------------------------------
 // Make our public builtins accessible
 void
 register_ansi24(void)
 {
     register_function("ansi24_version",           0,  0, bf_ansi24_version);
     register_function("ansi24_display_colors",    0,  0, bf_ansi24_display_colors);
+    register_function("ansi24_display_builtins",  0,  0, bf_ansi24_display_builtins);
     register_function("ansi24_get_color_bits",    0,  0, bf_ansi24_get_color_bits);
     register_function("ansi24_is_foreground",     0,  0, bf_ansi24_is_foreground);
     register_function("ansi24_set_color_bits",    1,  1, bf_ansi24_set_color_bits, TYPE_INT);
@@ -2317,8 +2125,7 @@ register_ansi24(void)
     register_function("ansi24_replace_tags",      1,  1, bf_ansi24_replace_tags, TYPE_STR);
     register_function("ansi24_remove_tags",       1,  1, bf_ansi24_remove_tags, TYPE_STR);
     register_function("ansi24_remove_sequences",  1,  1, bf_ansi24_remove_sequences, TYPE_STR);
-    register_function("ansi24_replace_substring", 3,  3, bf_ansi24_replace_substring, TYPE_STR, TYPE_STR, TYPE_STR);
     register_function("ansi24_printf",            1, -1, bf_ansi24_printf, TYPE_STR);
 }
 
-#endif  // MOO_BUILTINS
+#endif  // NO_MOO_BUILTINS
