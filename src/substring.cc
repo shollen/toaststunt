@@ -5,6 +5,10 @@
 //  Programming: Perpenso LLC, Tony Tribelli
 //
 
+#ifdef _WIN32
+#include <shlwapi.h>
+#endif
+
 #include "substring.h"
 
 #ifndef NO_MOO_BUILTINS

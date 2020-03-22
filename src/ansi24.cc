@@ -9,10 +9,6 @@
 #include <cstdio>
 #include <algorithm>
 
-#ifdef _WIN32
-#include <shlwapi.h>
-#endif
-
 #include "substring.h"
 #include "ansi24.h"
 
