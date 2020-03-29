@@ -5,6 +5,7 @@
 //  Programming: Perpenso LLC, Tony Tribelli
 
 #include <iostream>
+#include <cstring>
 
 #include "utils.h"
 
