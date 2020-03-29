@@ -25,6 +25,22 @@ using namespace std;
 
 
 // -------------------------------------------------------------------------
+bool compare_to_expected(const char *expected, const char *actual) {
+    bool same = strcmp(expected, actual) == 0;
+    
+    if (! same)
+        cout << "  Expected: " << " \"" << expected << "\"" << endl
+             << "  Actual:   " << " \"" << actual   << "\"" << endl;
+    
+    return same;
+}
+
+// -------------------------------------------------------------------------
+void report_failure(const char *protocol, const char *input) {
+    cout << "  " << protocol << " failed \"" << input << "\"" << endl;
+}
+
+// -------------------------------------------------------------------------
 // Output text once with foreground tags and a second time with background tags.
 // Then set output back to normal.
 // This output is for visual inspection, colored text, colored backgrounds.
@@ -66,36 +82,28 @@ void test_replace_ansi(const char *expected,
         if (remove_color_tags(replacement,
                               sizeof(replacement),
                               original)) {
-            if (strcmp(expected, replacement) != 0)
-                cout << "  Expected: " << " \"" << expected    << "\"" << endl
-                     << "  Actual:   " << " \"" << replacement << "\"" << endl;
+            compare_to_expected(expected, replacement);
         }
         else
-            cout << "remove_color_tags failed \"" << original << "\"" << endl;
+            report_failure("remove_color_tags", original);
     }
     else if (remove_ansi) {
         if (remove_ansi_sequences(replacement,
                                   sizeof(replacement),
                                   original)) {
-            if (strcmp(expected, replacement) != 0)
-                cout << "  Expected: " << " \"" << expected    << "\"" << endl
-                     << "  Actual:   " << " \"" << replacement << "\"" << endl;
+            compare_to_expected(expected, replacement);
         }
         else
-            cout << "remove_ansi_sequences failed \""
-                 << original << "\"" << endl;
+            report_failure("remove_ansi_sequences", original);
     }
     else {
         if (replace_color_tags_with_ansi(replacement,
                                          sizeof(replacement),
                                          original)) {
-            if (strcmp(expected, replacement) != 0)
-                cout << "  Expected: " << " \"" << expected    << "\"" << endl
-                     << "  Actual:   " << " \"" << replacement << "\"" << endl;
+            compare_to_expected(expected, replacement);
         }
         else
-            cout << "replace_color_tags_with_ansi failed \""
-                 << original << "\"" << endl;
+            report_failure("replace_color_tags_with_ansi", original);
     }
 }
 
@@ -115,12 +123,10 @@ void test_replace_string(const char *expected,
                              original,
                              find,
                              caseless)) {
-            if (strcmp(expected, replacement) != 0)
-                cout << "  Expected: " << " \"" << expected    << "\"" << endl
-                     << "  Actual:   " << " \"" << replacement << "\"" << endl;
+            compare_to_expected(expected, replacement);
         }
         else
-            cout << "remove_substring failed \"" << original << "\"" << endl;
+            report_failure("remove_substring", original);
     }
     else {
         if (replace_substring(replacement,
@@ -129,12 +135,10 @@ void test_replace_string(const char *expected,
                               find,
                               caseless,
                               replace)) {
-            if (strcmp(expected, replacement) != 0)
-                cout << "  Expected: " << " \"" << expected    << "\"" << endl
-                     << "  Actual:   " << " \"" << replacement << "\"" << endl;
+            compare_to_expected(expected, replacement);
         }
         else
-            cout << "replace_substring failed \"" << original << "\"" << endl;
+            report_failure("replace_substring", original);
     }
 }
 
@@ -149,13 +153,10 @@ void test_format_string(const char *expected, const char *format, const char *st
     written = format_string(buffer, sizeof(buffer), format, string);
 
     if (written > 0) {
-        if (strcmp(expected, buffer) != 0)
-            cout << "  Expected: " << " \"" << expected << "\"" << endl
-                 << "  Actual:   " << " \"" << buffer   << "\"" << endl;
+        compare_to_expected(expected, buffer);
     }
     else
-        cout << "format_string failed ("
-             << written << ") \"" << format << "\"" << endl;
+        report_failure("format_string", format);
 }
 
 void test_format_int(const char *expected, const char *format, int number) {
@@ -165,13 +166,10 @@ void test_format_int(const char *expected, const char *format, int number) {
     written = format_int(buffer, sizeof(buffer), format, number);
 
     if (written > 0) {
-        if (strcmp(expected, buffer) != 0)
-            cout << "  Expected: " << " \"" << expected << "\"" << endl
-                 << "  Actual:   " << " \"" << buffer   << "\"" << endl;
+        compare_to_expected(expected, buffer);
     }
     else
-        cout << "format_int failed ("
-             << written << ") \"" << format << "\"" << endl;
+        report_failure("format_int", format);
 }
 
 void test_format_double(const char *expected, const char *format, double number) {
@@ -181,13 +179,10 @@ void test_format_double(const char *expected, const char *format, double number)
     written = format_double(buffer, sizeof(buffer), format, number);
 
     if (written > 0) {
-        if (strcmp(expected, buffer) != 0)
-            cout << "  Expected: " << " \"" << expected << "\"" << endl
-                 << "  Actual:   " << " \"" << buffer   << "\"" << endl;
+        compare_to_expected(expected, buffer);
     }
     else
-        cout << "format_double failed ("
-             << written << ") \"" << format << "\"" << endl;
+        report_failure("format_double", format);
 }
 
 void test_format_char(const char *expected, const char *format, int character) {
@@ -197,13 +192,10 @@ void test_format_char(const char *expected, const char *format, int character) {
     written = format_char(buffer, sizeof(buffer), format, character);
 
     if (written > 0) {
-        if (strcmp(expected, buffer) != 0)
-            cout << "  Expected: " << " \"" << expected << "\"" << endl
-                 << "  Actual:   " << " \"" << buffer   << "\"" << endl;
+        compare_to_expected(expected, buffer);
     }
     else
-        cout << "format_char failed ("
-             << written << ") \"" << format << "\"" << endl;
+        report_failure("format_char", format);
 }
 
 

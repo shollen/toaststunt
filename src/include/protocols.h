@@ -27,15 +27,15 @@ bool protocol_request (uint8_t    protocol);
 bool protocol_extract (char       *replacement,
                        size_t     size,
                        const char *original,
-                       uint8_t    protocol);
+                       uint8_t    protocol = 0);
 bool protocol_remove  (char       *replacement,
                        size_t     size,
                        const char *original,
-                       uint8_t    protocol);
+                       uint8_t    protocol = 0);
 bool protocol_create  (char       *message,
                        size_t     size,
                        const char *body,
-                       uint8_t    protocol,
-                       uint8_t    tag);
+                       uint8_t    protocol = 0,
+                       uint8_t    tag      = 0);
 
 #endif /* protocols_h */
