@@ -5,6 +5,8 @@
 //  Programming: Perpenso LLC, Tony Tribelli
 //
 
+#include <cstdio>
+
 #include "substring.h"
 #include "protocols.h"
 

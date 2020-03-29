@@ -2,6 +2,9 @@
 <Workspace
    version = "1.0">
    <FileRef
-      location = "group:test-ansi/test-ansi.xcodeproj">
+      location = "container:test-protocols/test-protocols.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "container:test-ansi/test-ansi.xcodeproj">
    </FileRef>
 </Workspace>

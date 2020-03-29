@@ -5,9 +5,9 @@
 //  Programming: Perpenso LLC, Tony Tribelli
 //
 // Building manually at the console:
-//     macoS:   clang++ -std=c++11 -DNO_MOO_BUILTINS test-ansi.cc substring.cc ansi24.cc
-//     linux:   g++ -std=c++11 -DNO_MOO_BUILTINS test-ansi.cc substring.cc ansi24.cc
-//     windows: cl /EHsc /DNO_MOO_BUILTINS test-ansi.cc substring.cc ansi24.cc Shlwapi.lib
+//     macoS:   clang++ -std=c++11 -DNO_MOO_BUILTINS -I../../src/include test-ansi.cc ../../src/substring.cc ../../src/ansi24.cc
+//     linux:   g++ -std=c++11 -DNO_MOO_BUILTINS -I../../src/include test-ansi.cc ../../src/substring.cc ../../src/ansi24.cc
+//     windows: cl /EHsc /DNO_MOO_BUILTINS /I../../src/include test-ansi.cc ../../src/substring.cc ../../src/ansi24.cc Shlwapi.lib
 //              To change the code page of the console:
 //                  chcp 65001
 
