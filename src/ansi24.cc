@@ -8,6 +8,7 @@
 #include <cctype>
 #include <cstdio>
 #include <algorithm>
+#include <unordered_map>
 
 #include "substring.h"
 #include "ansi24.h"
@@ -90,62 +91,83 @@ encode_utf8_string(uint8_t *dest, size_t size, int scalar)
 
 
 // -----------------------------------------------------------------------------
-// Globals indicating default ansi color bits and foreground/background modes
-// and functions to get and set them
+// Globals indicating ansi color bits and foreground/background modes
+// and functions to get and set them.
+// Key zero is for a default setting.
 // -----------------------------------------------------------------------------
 
-static ansi_modes ansi_color_bits_mode = ansi_8;
-static ansi_modes ansi_foreground_mode = ansi_fore;
+static unordered_map <uint64_t, ansi_modes> ansi_color_bits_mode = {
+    { 0, ansi_8 }
+};
+static unordered_map <uint64_t, ansi_modes> ansi_foreground_mode = {
+    { 0, ansi_fore }
+};
 
 // -----------------------------------------------------------------------------
 // Returns: The default ansi color bits mode
+//          or if a non-zero ID is specified the mode for that ID
 ansi_modes
-get_ansi_color_bits_mode(void)
+get_ansi_color_bits_mode(uint64_t id)
 {
-    return ansi_color_bits_mode;
+    // If undefined then define it using the default
+    return   (ansi_color_bits_mode.count(id) != 0)
+           ? ansi_color_bits_mode[id]
+           : set_ansi_color_bits_mode(id, ansi_color_bits_mode[0]);
 }
 
 // -----------------------------------------------------------------------------
 // Returns: The default ansi foreground/background mode
+//          or if a non-zero ID is specified the mode for that ID
 ansi_modes
-get_ansi_foreground_mode(void)
+get_ansi_foreground_mode(uint64_t id)
 {
-    return ansi_foreground_mode;
+    // If undefined then define it using the default
+    return   (ansi_foreground_mode.count(id) != 0)
+           ? ansi_foreground_mode[id]
+           : set_ansi_foreground_mode(id, ansi_foreground_mode[0]);
 }
 
 // -----------------------------------------------------------------------------
 // Returns: The default ansi color bits mode
+//          or if a non-zero ID is specified the mode for that ID
 ansi_modes
-set_ansi_color_bits_mode(ansi_modes mode)
+set_ansi_color_bits_mode(uint64_t id, ansi_modes mode)
 {
     switch (mode) {
         case ansi_4  :
         case ansi_8  :
         case ansi_24 :
-            ansi_color_bits_mode = mode;
+            ansi_color_bits_mode[id] = mode;
             break;
         default :
-            break;  // Default unchanged for invalid paramter
+            // Define it using the default
+            ansi_color_bits_mode[id] = ansi_color_bits_mode[0];
+            break;
     }
     
-    return ansi_color_bits_mode;
+    // Returning reality not necessarily what was requested
+    return ansi_color_bits_mode[id];
 }
 
 // -----------------------------------------------------------------------------
 // Returns: The default ansi foreground/background mode
+//          or if a non-zero ID is specified the mode for that ID
 ansi_modes
-set_ansi_foreground_mode(ansi_modes mode)
+set_ansi_foreground_mode(uint64_t id, ansi_modes mode)
 {
     switch (mode) {
         case ansi_fore :
         case ansi_back :
-            ansi_foreground_mode = mode;
+            ansi_foreground_mode[id] = mode;
             break;
         default :
-            break;  // Default unchanged for invalid paramter
+            // Define it using the default
+            ansi_foreground_mode[id] = ansi_foreground_mode[0];
+            break;
     }
-    
-    return ansi_foreground_mode;
+
+    // Returning reality not necessarily what was requested
+    return ansi_foreground_mode[id];
 }
 
 
@@ -587,9 +609,9 @@ create_ansi_string (ansi_string &string,
     
     // See if the default ansi modes are specified
     if (color_bits == ansi_default)
-        color_bits = get_ansi_color_bits_mode();
+        color_bits = get_ansi_color_bits_mode(0);
     if (foreground == ansi_default)
-        foreground = get_ansi_foreground_mode();
+        foreground = get_ansi_foreground_mode(0);
 
     // Maybe the color was specified by name
     if ((color_index = name_to_index(name)) != -1) {
@@ -626,13 +648,13 @@ create_ansi_string (ansi_string &string,
                 int fg = standard_colors[color_index].foreground;
                 if (cb != -1) {
                     // In case there is no escape sequence, just a state change
-                    color_bits    = set_ansi_color_bits_mode((ansi_modes) cb);
+                    color_bits    = set_ansi_color_bits_mode(0, (ansi_modes) cb);
                     string.buf[0] = 0;
                     successful    = true;
                 }
                 else if (fg != -1) {
                     // In case there is no escape sequence, just a state change
-                    foreground    = set_ansi_foreground_mode((ansi_modes) fg);
+                    foreground    = set_ansi_foreground_mode(0, (ansi_modes) fg);
                     string.buf[0] = 0;
                     successful    = true;
                 }
@@ -750,7 +772,7 @@ create_ansi8_string(ansi_string &string,
 {
     string.buf[0] = 0;  // Just in case sprintf fails
     if (foreground == ansi_default)
-        foreground = get_ansi_foreground_mode();
+        foreground = get_ansi_foreground_mode(0);
     
     return sprintf(string.buf,
                    "\x1b[%d;5;%dm",
@@ -767,7 +789,7 @@ create_ansi24_string (ansi_string &string,
 {
     string.buf[0] = 0;  // Just in case sprintf fails
     if (foreground == ansi_default)
-        foreground = get_ansi_foreground_mode();
+        foreground = get_ansi_foreground_mode(0);
     
     return sprintf(string.buf,
                    "\x1b[%d;2;%d;%d;%dm",
@@ -1122,8 +1144,8 @@ display_colors_for_mode(ansi_modes color_bits, char *&buffer, size_t &size) {
     // pointers have been checked for null by the caller
     
     // Preserve the current mode before changing it
-    ansi_modes previous = get_ansi_color_bits_mode();
-    set_ansi_color_bits_mode(color_bits);
+    ansi_modes previous = get_ansi_color_bits_mode(0);
+    set_ansi_color_bits_mode(0, color_bits);
     
     // Identifty the current mode in the output
     const char *label;
@@ -1214,7 +1236,7 @@ display_colors_for_mode(ansi_modes color_bits, char *&buffer, size_t &size) {
         copy_substring(buffer, size, newline, newline_len);
     }
 
-    set_ansi_color_bits_mode(previous);
+    set_ansi_color_bits_mode(0, previous);
 }
 
 // -----------------------------------------------------------------------------
@@ -1337,12 +1359,16 @@ format_char(char       *buffer,
 // ansi24_version           () --> TYPE_STR version
 // ansi24_display_colors    () --> TYPE_STR string displaying all colors
 //                          --> TYPE_ERR E_RANGE
-// ansi24_get_color_bits    () --> TYPE_INT color bits = { 4, 8, 24 }
-// ansi24_is_foreground     () --> TYPE_INT foreground = 1, background = 0
-// ansi24_set_color_bits    (TYPE_INT color bits = { 4, 8, 24 })
+// ansi24_get_color_bits    (TYPE_INT id)
+//                          --> TYPE_INT color bits = { 4, 8, 24 }
+// ansi24_is_foreground     (TYPE_INT id)
+//                          --> TYPE_INT foreground = 1, background = 0
+// ansi24_set_color_bits    (TYPE_INT id,
+//                           TYPE_INT color bits = { 4, 8, 24 })
 //                          --> TYPE_INT current setting = { 4, 8, 24 }
 //                          --> TYPE_ERR E_RANGE
-// ansi24_set_foreground    (TYPE_INT foreground = { true, false })
+// ansi24_set_foreground    (TYPE_INT id,
+//                           TYPE_INT foreground = { 1, 0 })
 //                          --> TYPE_INT current setting = { 1, 0 }
 // ansi24_named_sequence    (TYPE_STR color name,
 //                           {optional} TYPE_INT foreground = { 1, 0 },
@@ -1458,7 +1484,7 @@ bf_ansi24_version(Var arglist, Byte next, void *vdata, Objid progr)
 
     // Package informaion and version
     rv.type  = TYPE_STR;
-    rv.v.str = str_dup("ansi24 1.0.2");
+    rv.v.str = str_dup("ansi24 1.0.3");
     
     free_var(arglist);
     return make_var_pack(rv);
@@ -1466,23 +1492,34 @@ bf_ansi24_version(Var arglist, Byte next, void *vdata, Objid progr)
 
 // -----------------------------------------------------------------------------
 // Get the default ansi color bits mode
-// Return:  TYPE_INT color bits = { 4, 8, 24 }
-// Testing: ;player:tell(tostr(ansi24_set_color_bits(4)))
-//          ;player:tell(tostr(ansi24_get_color_bits()))
-//          ;player:tell(tostr(ansi24_set_color_bits(24)))
-//          ;player:tell(tostr(ansi24_get_color_bits()))
-//          ;player:tell(tostr(ansi24_set_color_bits(8)))
-//          ;player:tell(tostr(ansi24_get_color_bits()))
-//          ;player:tell(tostr(ansi24_set_color_bits(4)))
-//          ;player:tell(tostr(ansi24_get_color_bits()))
-//          ;player:tell(tostr(ansi24_set_color_bits(42)))
-//          ;player:tell(tostr(ansi24_get_color_bits()))
+// or if a non-zero ID is specified the mode for that ID
+// Arguments: TYPE_INT id
+// Return:    TYPE_INT color bits = { 4, 8, 24 }
+// Testing:   ;player:tell(tostr(ansi24_get_color_bits(0)))
+//            ;player:tell(tostr(ansi24_set_color_bits(0, 4)))
+//            ;player:tell(tostr(ansi24_get_color_bits(0)))
+//            ;player:tell(tostr(ansi24_set_color_bits(0, 24)))
+//            ;player:tell(tostr(ansi24_get_color_bits(0)))
+//            ;player:tell(tostr(ansi24_set_color_bits(0, 8)))
+//            ;player:tell(tostr(ansi24_get_color_bits(0)))
+//            ;player:tell(tostr(ansi24_set_color_bits(0, 4)))
+//            ;player:tell(tostr(ansi24_get_color_bits(0)))
+//            ;player:tell(tostr(ansi24_set_color_bits(0, 42)))
+//            ;player:tell(tostr(ansi24_get_color_bits(0)))
+//            ;player:tell(tostr(ansi24_set_color_bits(0, 8)))
+//            ;player:tell(tostr(ansi24_get_color_bits(8)))
+//            ;player:tell(tostr(ansi24_set_color_bits(0, 24)))
+//            ;player:tell(tostr(ansi24_get_color_bits(24)))
+//            ;player:tell(tostr(ansi24_set_color_bits(4, 4)))
+//            ;player:tell(tostr(ansi24_get_color_bits(4)))
+//            ;player:tell(tostr(ansi24_get_color_bits(0)))
 static package
 bf_ansi24_get_color_bits(Var arglist, Byte next, void *vdata, Objid progr)
 {
-    Var rv;
-    
-    switch (get_ansi_color_bits_mode()) {
+    Var      rv;
+    uint64_t id = (uint64_t) arglist.v.list[1].v.num;
+
+    switch (get_ansi_color_bits_mode(id)) {
         case ansi_4  :
             rv.type  = TYPE_INT;
             rv.v.num = 4;
@@ -1506,19 +1543,24 @@ bf_ansi24_get_color_bits(Var arglist, Byte next, void *vdata, Objid progr)
 
 // -----------------------------------------------------------------------------
 // Get the default ansi foreground/background mode
-// Return:  TYPE_INT foreground = 1, background = 0
-// Testing: ;player:tell(tostr(ansi24_set_foreground(1)))
-//          ;player:tell(tostr(ansi24_is_foreground()))
-//          ;player:tell(tostr(ansi24_set_foreground(0)))
-//          ;player:tell(tostr(ansi24_is_foreground()))
-//          ;player:tell(tostr(ansi24_set_foreground(42)))
-//          ;player:tell(tostr(ansi24_is_foreground()))
+// or if a non-zero ID is specified the mode for that ID
+// Arguments: TYPE_INT id
+// Return:    TYPE_INT foreground = 1, background = 0
+// Testing:   ;player:tell(tostr(ansi24_is_foreground(0)))
+//            ;player:tell(tostr(ansi24_set_foreground(0, 0)))
+//            ;player:tell(tostr(ansi24_is_foreground(0)))
+//            ;player:tell(tostr(ansi24_set_foreground(0, 42)))
+//            ;player:tell(tostr(ansi24_is_foreground(0)))
+//            ;player:tell(tostr(ansi24_set_foreground(4, 0)))
+//            ;player:tell(tostr(ansi24_is_foreground(4)))
+//            ;player:tell(tostr(ansi24_is_foreground(8)))
 static package
 bf_ansi24_is_foreground(Var arglist, Byte next, void *vdata, Objid progr)
 {
-    Var  rv;
-    
-    switch (get_ansi_foreground_mode()) {
+    Var      rv;
+    uint64_t id = (uint64_t) arglist.v.list[1].v.num;
+
+    switch (get_ansi_foreground_mode(id)) {
         case ansi_fore :
             rv.type  = TYPE_INT;
             rv.v.num = 1;
@@ -1538,33 +1580,27 @@ bf_ansi24_is_foreground(Var arglist, Byte next, void *vdata, Objid progr)
 
 // -----------------------------------------------------------------------------
 // Set the default ansi color bits mode
-// Arguments: TYPE_INT color bits = { 4, 8, 24 }
+// or if a non-zero ID is specified the mode for that ID
+// Arguments: TYPE_INT id
+//            TYPE_INT color bits = { 4, 8, 24 }
 // Returns:   TYPE_INT current setting = { 4, 8, 24 }
 //            TYPE_ERR E_RANGE
-// Testing:   ;player:tell(tostr(ansi24_set_color_bits(4)))
-//            ;player:tell(tostr(ansi24_get_color_bits()))
-//            ;player:tell(tostr(ansi24_set_color_bits(24)))
-//            ;player:tell(tostr(ansi24_get_color_bits()))
-//            ;player:tell(tostr(ansi24_set_color_bits(8)))
-//            ;player:tell(tostr(ansi24_get_color_bits()))
-//            ;player:tell(tostr(ansi24_set_color_bits(4)))
-//            ;player:tell(tostr(ansi24_get_color_bits()))
-//            ;player:tell(tostr(ansi24_set_color_bits(42)))
-//            ;player:tell(tostr(ansi24_get_color_bits()))
+// Testing:   See bf_ansi24_get_color_bits()
 static package
 bf_ansi24_set_color_bits(Var arglist, Byte next, void *vdata, Objid progr)
 {
-    uint8_t color_bits = (uint8_t) arglist.v.list[1].v.num;
+    uint64_t id         = (uint64_t) arglist.v.list[1].v.num;
+    uint8_t  color_bits = (uint8_t)  arglist.v.list[2].v.num;
 
     switch (color_bits) {
         case 4 :
-            set_ansi_color_bits_mode(ansi_4);
+            set_ansi_color_bits_mode(id, ansi_4);
             break;
         case 8 :
-            set_ansi_color_bits_mode(ansi_8);
+            set_ansi_color_bits_mode(id, ansi_8);
             break;
         case 24 :
-            set_ansi_color_bits_mode(ansi_24);
+            set_ansi_color_bits_mode(id, ansi_24);
             break;
         default :
             free_var(arglist);
@@ -1577,20 +1613,19 @@ bf_ansi24_set_color_bits(Var arglist, Byte next, void *vdata, Objid progr)
 }
 
 // -----------------------------------------------------------------------------
-// Get the default ansi foreground/background mode
-// Arguments: TYPE_INT foreground = { 1, 0 }
+// Set the default ansi foreground/background mode
+// or if a non-zero ID is specified the mode for that ID
+// Arguments: TYPE_INT id
+//            TYPE_INT foreground = { 1, 0 }
 // Return:    TYPE_INT current setting = { 1, 0 }
-// Testing:   ;player:tell(tostr(ansi24_set_foreground(1)))
-//            ;player:tell(tostr(ansi24_is_foreground()))
-//            ;player:tell(tostr(ansi24_set_foreground(0)))
-//            ;player:tell(tostr(ansi24_is_foreground()))
-//            ;player:tell(tostr(ansi24_set_foreground(42)))
-//            ;player:tell(tostr(ansi24_is_foreground()))
+// Testing:   See bf_ansi24_is_foreground()
 static package
 bf_ansi24_set_foreground(Var arglist, Byte next, void *vdata, Objid progr)
 {
-    set_ansi_foreground_mode(  ((bool) arglist.v.list[1].v.num)
-                             ? ansi_fore : ansi_back);
+    uint64_t id         = (uint64_t) arglist.v.list[1].v.num;
+    bool     foreground = (bool)     arglist.v.list[2].v.num;
+
+    set_ansi_foreground_mode(id, foreground ? ansi_fore : ansi_back);
 
     // Don't trust that the set_ansi calls worked,
     // use our "is" builtin to get the actual state.
@@ -2182,10 +2217,10 @@ register_ansi24(void)
 {
     register_function("ansi24_version",          0,  0, bf_ansi24_version);
     register_function("ansi24_display_colors",   0,  0, bf_ansi24_display_colors);
-    register_function("ansi24_get_color_bits",   0,  0, bf_ansi24_get_color_bits);
-    register_function("ansi24_is_foreground",    0,  0, bf_ansi24_is_foreground);
-    register_function("ansi24_set_color_bits",   1,  1, bf_ansi24_set_color_bits, TYPE_INT);
-    register_function("ansi24_set_foreground",   1,  1, bf_ansi24_set_foreground, TYPE_INT);
+    register_function("ansi24_get_color_bits",   1,  1, bf_ansi24_get_color_bits, TYPE_INT);
+    register_function("ansi24_is_foreground",    1,  1, bf_ansi24_is_foreground, TYPE_INT);
+    register_function("ansi24_set_color_bits",   2,  2, bf_ansi24_set_color_bits, TYPE_INT, TYPE_INT);
+    register_function("ansi24_set_foreground",   2,  2, bf_ansi24_set_foreground, TYPE_INT, TYPE_INT);
     register_function("ansi24_named_sequence",   1,  3, bf_ansi24_named_sequence, TYPE_STR, TYPE_INT, TYPE_INT);
     register_function("ansi24_4bit_sequence",    1,  1, bf_ansi24_4bit_sequence, TYPE_INT);
     register_function("ansi24_8bit_sequence",    1,  2, bf_ansi24_8bit_sequence, TYPE_INT, TYPE_INT);

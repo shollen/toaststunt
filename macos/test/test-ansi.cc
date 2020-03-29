@@ -26,6 +26,24 @@ using namespace std;
 
 
 // -------------------------------------------------------------------------
+// Test setting and getting the color bits and foreground modes.
+// The expected result is passed in for verification.
+// If the requested mode is ansi_default no setting is attempted,
+// only a get occurs.
+void test_color_bits_mode(uint64_t id, ansi_modes expected, ansi_modes requested) {
+    if (requested != ansi_default)
+        set_ansi_color_bits_mode(id, requested);
+    
+    compare_to_expected(expected, get_ansi_color_bits_mode(id));
+}
+void test_forground_mode(uint64_t id, ansi_modes expected, ansi_modes requested) {
+    if (requested != ansi_default)
+        set_ansi_foreground_mode(id, requested);
+    
+    compare_to_expected(expected, get_ansi_foreground_mode(id));
+}
+
+// -------------------------------------------------------------------------
 // Output text once with foreground tags and a second time with background tags.
 // Then set output back to normal.
 // This output is for visual inspection, colored text, colored backgrounds.
@@ -211,6 +229,29 @@ int main(void) {
 
     display_colors(buffer, sizeof(buffer));
     cout << buffer << endl;
+    
+    // -------------------------------------------------------------------------
+    // Test setting and getting the color bits and foreground modes.
+    // If the requested mode is ansi_default no setting is attempted,
+    // only a get occurs.
+    cout << "Testing getting/setting color bits and foregound modes" << endl;
+    test_color_bits_mode ( 0, ansi_8,    ansi_default);
+    test_color_bits_mode ( 0, ansi_4,    ansi_4);
+    test_color_bits_mode ( 0, ansi_8,    ansi_8);
+    test_color_bits_mode ( 0, ansi_24,   ansi_24);
+    test_color_bits_mode ( 0, ansi_24,   (ansi_modes) 42);
+    test_color_bits_mode ( 4, ansi_24,   (ansi_modes) 42);
+    test_color_bits_mode ( 4, ansi_24,   ansi_default);
+    test_color_bits_mode ( 8, ansi_8,    ansi_8);
+    test_color_bits_mode (24, ansi_24,   ansi_default);
+    test_forground_mode  ( 0, ansi_fore, ansi_default);
+    test_forground_mode  ( 0, ansi_back, ansi_back);
+    test_forground_mode  ( 0, ansi_fore, ansi_fore);
+    test_forground_mode  ( 0, ansi_fore, (ansi_modes) 42);
+    test_forground_mode  ( 4, ansi_fore, (ansi_modes) 42);
+    test_forground_mode  ( 4, ansi_fore, ansi_default);
+    test_forground_mode  ( 8, ansi_back, ansi_back);
+    test_forground_mode  (24, ansi_fore, ansi_default);
 
     // -------------------------------------------------------------------------
     // Show all attributes being selectively turned on and off,
@@ -220,7 +261,7 @@ int main(void) {
     ansi_string normal, color1, color2;
 
     cout << "Testing 4-bit attributes on and off" << endl;
-    set_ansi_color_bits_mode(ansi_4);
+    set_ansi_color_bits_mode(0, ansi_4);
     create_ansi_string (color1, "bold");
     create_ansi_string (color2, "nobold");
     cout << "normal    " << color1.buf << "bold"     << color2.buf << endl;
@@ -255,12 +296,13 @@ int main(void) {
     create_ansi_string (color2, "noinv");
     cout << "normal    " << color1.buf << "inverse"  << color2.buf << endl;
     cout << "normal    " << normal.buf << endl;
-    
+
     // -------------------------------------------------------------------------
     // Testing using 24-bit tags in 8-bit mode
     cout << "Testing 24-bit RGB to 8-bit palette conversion" << endl;
-    set_ansi_color_bits_mode(ansi_8);
-    
+    set_ansi_color_bits_mode(0, ansi_8);
+    set_ansi_foreground_mode(0, ansi_fore);
+
     // Use components that are not exactly the same so we
     // end up in the 216 entry 6x6x6 space
     test_replace_ansi ("\x1b[38;5;16m 0.0.1\x1b[0m",        "[0.0.1] 0.0.1[normal]");
@@ -338,7 +380,7 @@ int main(void) {
     // -------------------------------------------------------------------------
     // Testing using 24-bit tags in 4-bit mode
     cout << "Testing 24-bit RGB to 4-bit SGR code conversion" << endl;
-    set_ansi_color_bits_mode(ansi_4);
+    set_ansi_color_bits_mode(0, ansi_4);
     test_replace_ansi ("\x1b[30m 0.0.0\x1b[0m",       "[0.0.0] 0.0.0[normal]");
     test_replace_ansi ("\x1b[34m 0.0.127\x1b[0m",     "[0.0.127] 0.0.127[normal]");
     test_replace_ansi ("\x1b[94m 0.0.255\x1b[0m",     "[0.0.255] 0.0.255[normal]");
@@ -374,7 +416,7 @@ int main(void) {
     // -------------------------------------------------------------------------
     // Test some of the parameter checking
 
-    set_ansi_color_bits_mode(ansi_8);
+    set_ansi_color_bits_mode(0, ansi_8);
 
     cout << "Testing paramter checking" << endl;
     if (create_ansi_string (normal, nullptr))
@@ -678,20 +720,20 @@ int main(void) {
     test_replace_ansi ("\x1b[48;2;187;0;102m",   "[pink]");
     test_replace_ansi ("\x1b[48;2;187;102;0m",   "[orange]");
     test_replace_ansi ("\x1b",                   "[esc]");
-    set_ansi_color_bits_mode (ansi_4);
-    set_ansi_foreground_mode (ansi_fore);
+    set_ansi_color_bits_mode(0, ansi_4);
+    set_ansi_foreground_mode(0, ansi_fore);
     test_replace_ansi ("\x1b[32m",               "[green]");
-    set_ansi_foreground_mode (ansi_back);
+    set_ansi_foreground_mode(0, ansi_back);
     test_replace_ansi ("\x1b[42m",               "[green]");
-    set_ansi_color_bits_mode (ansi_8);
-    set_ansi_foreground_mode (ansi_fore);
+    set_ansi_color_bits_mode(0, ansi_8);
+    set_ansi_foreground_mode(0, ansi_fore);
     test_replace_ansi ("\x1b[38;5;2m",           "[green]");
-    set_ansi_foreground_mode (ansi_back);
+    set_ansi_foreground_mode(0, ansi_back);
     test_replace_ansi ("\x1b[48;5;2m",           "[green]");
-    set_ansi_color_bits_mode (ansi_24);
-    set_ansi_foreground_mode (ansi_fore);
+    set_ansi_color_bits_mode(0, ansi_24);
+    set_ansi_foreground_mode(0, ansi_fore);
     test_replace_ansi ("\x1b[38;2;0;187;0m",     "[green]");
-    set_ansi_foreground_mode (ansi_back);
+    set_ansi_foreground_mode(0, ansi_back);
     test_replace_ansi ("\x1b[48;2;0;187;0m",     "[green]");
     test_replace_ansi ("\x1b[49m",               "[fg]");           // Foreground
     test_replace_ansi ("\x1b[0m",                "[4-bit]");        // 4-bit
@@ -706,16 +748,16 @@ int main(void) {
     // Test the replacement of tags with ansi escape sequences
     // when embedded in a line of text. Text that may be utf-8.
     
-    set_ansi_color_bits_mode(ansi_4);
+    set_ansi_color_bits_mode(0, ansi_4);
     test_replace_ansi("This is a test of 4-bit \x1b[31mred\x1b[0m, \x1b[2m\x1b[32mfaint green\x1b[0m and \x1b[4m\x1b[5m\x1b[34munderlined blinking blue\x1b[0m and a [mismatch].",
                       "This is a test of 4-bit [red]red[normal], [faint][green]faint green[normal] and [under][blink][blue]underlined blinking blue[normal] and a [mismatch].");
-    set_ansi_color_bits_mode(ansi_8);
+    set_ansi_color_bits_mode(0, ansi_8);
     test_replace_ansi("The embedded 8-bit palette index for \x1b[38;5;1mred\x1b[0m, \x1b[38;5;11mbright yellow\x1b[0m, \x1b[38;5;14mbright cyan\x1b[0m and \x1b[38;5;15mbright white\x1b[0m.",
                       "The embedded 8-bit palette index for [1]red[normal], [013]bright yellow[normal], [0xe]bright cyan[normal] and [0x0f]bright white[normal].");
-    set_ansi_color_bits_mode(ansi_24);
+    set_ansi_color_bits_mode(0, ansi_24);
     test_replace_ansi("The embedded 24-bit rgb values for \x1b[38;2;192;0;0mred\x1b[0m, \x1b[38;2;192;255;192mbright white with a green tint\x1b[0m and \x1b[38;2;255;255;191mbright white with a yellow tint\x1b[0m.",
                       "The embedded 24-bit rgb values for [192.0.0]red[normal], [192.255.192]bright white with a green tint[normal] and [0xff.0xff.0xbf]bright white with a yellow tint[normal].");
-    set_ansi_color_bits_mode(ansi_4);
+    set_ansi_color_bits_mode(0, ansi_4);
     test_replace_ansi("\x1b[31m\x1b[47mred on white \x1b[103mred on byellow\x1b[49m and plain red\x1b[0m.",
                       "[red][bg][white]red on white [byellow]red on byellow[fg] and plain red[normal].");
     test_replace_ansi("\x1b[0m\x1b[31m4-bit red\x1b[0m, \x1b[38;5;1m8-bit red \x1b[38;5;242mgray\x1b[0m, \x1b[38;2;187;0;0m24-bit red \x1b[38;2;79;255;79mgreenish\x1b[0m and normal.",

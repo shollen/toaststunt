@@ -7,6 +7,7 @@
 #ifndef utils_h
 #define utils_h
 
+bool compare_to_expected (int        expected,  int        actual);
 bool compare_to_expected (const char *expected, const char *actual);
 void report_failure      (const char *protocol, const char *input);
 

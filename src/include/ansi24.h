@@ -21,10 +21,10 @@ typedef struct { char buf[32]; } ansi_string;   // Room for general strings too
 // -----------------------------------------------------------------------------
 // Get and set the ansi global variables
 
-ansi_modes get_ansi_color_bits_mode (void);
-ansi_modes get_ansi_foreground_mode (void);
-ansi_modes set_ansi_color_bits_mode (ansi_modes mode);
-ansi_modes set_ansi_foreground_mode (ansi_modes mode);
+ansi_modes get_ansi_color_bits_mode (uint64_t id);
+ansi_modes get_ansi_foreground_mode (uint64_t id);
+ansi_modes set_ansi_color_bits_mode (uint64_t id, ansi_modes mode);
+ansi_modes set_ansi_foreground_mode (uint64_t id, ansi_modes mode);
 
 // -----------------------------------------------------------------------------
 // Create an ansi escape sequence from a name or from a numeric value

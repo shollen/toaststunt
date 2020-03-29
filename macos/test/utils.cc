@@ -14,6 +14,17 @@ using namespace std;
 
 
 // -------------------------------------------------------------------------
+bool compare_to_expected(int expected, int actual) {
+    bool same = (expected == actual);
+    
+    if (! same)
+        cout << "  Expected: " << expected << endl
+             << "  Actual:   " << actual   << endl;
+    
+    return same;
+}
+
+// -------------------------------------------------------------------------
 bool compare_to_expected(const char *expected, const char *actual) {
     bool same = strcmp(expected, actual) == 0;
     
