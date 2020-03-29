@@ -10,6 +10,7 @@
 		BB186A6723C12AB500221D97 /* test-ansi.cc in Sources */ = {isa = PBXBuildFile; fileRef = BB186A6523C12AB500221D97 /* test-ansi.cc */; };
 		BB6D505A243081D1001D0723 /* ansi24.cc in Sources */ = {isa = PBXBuildFile; fileRef = BB6D5058243081D1001D0723 /* ansi24.cc */; };
 		BB6D505B243081D1001D0723 /* substring.cc in Sources */ = {isa = PBXBuildFile; fileRef = BB6D5059243081D1001D0723 /* substring.cc */; };
+		BBD1F23F24311B5700E873DE /* utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = BBD1F23E24311B5700E873DE /* utils.cc */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -31,6 +32,8 @@
 		BB6D5057243081B2001D0723 /* substring.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = substring.h; path = ../../../src/include/substring.h; sourceTree = SOURCE_ROOT; };
 		BB6D5058243081D1001D0723 /* ansi24.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ansi24.cc; path = ../../../src/ansi24.cc; sourceTree = SOURCE_ROOT; };
 		BB6D5059243081D1001D0723 /* substring.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = substring.cc; path = ../../../src/substring.cc; sourceTree = SOURCE_ROOT; };
+		BBD1F23D24311B5700E873DE /* utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = utils.h; path = ../utils.h; sourceTree = SOURCE_ROOT; };
+		BBD1F23E24311B5700E873DE /* utils.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = utils.cc; path = ../utils.cc; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -63,8 +66,10 @@
 		BB186A5C23C12A9800221D97 /* test-ansi */ = {
 			isa = PBXGroup;
 			children = (
+				BBD1F23D24311B5700E873DE /* utils.h */,
 				BB6D5056243081B2001D0723 /* ansi24.h */,
 				BB6D5057243081B2001D0723 /* substring.h */,
+				BBD1F23E24311B5700E873DE /* utils.cc */,
 				BB6D5058243081D1001D0723 /* ansi24.cc */,
 				BB6D5059243081D1001D0723 /* substring.cc */,
 				BB186A6523C12AB500221D97 /* test-ansi.cc */,
@@ -129,6 +134,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BB6D505A243081D1001D0723 /* ansi24.cc in Sources */,
+				BBD1F23F24311B5700E873DE /* utils.cc in Sources */,
 				BB6D505B243081D1001D0723 /* substring.cc in Sources */,
 				BB186A6723C12AB500221D97 /* test-ansi.cc in Sources */,
 			);

@@ -5,36 +5,21 @@
 //  Programming: Perpenso LLC, Tony Tribelli
 //
 // Building manually at the console:
-//     macoS:   clang++ -std=c++11 -DNO_MOO_BUILTINS -I../../src/include test-protocols.cc ../../src/substring.cc ../../src/protocols.cc
-//     linux:   g++ -std=c++11 -DNO_MOO_BUILTINS -I../../src/include test-protocols.cc ../../src/substring.cc ../../src/protocols.cc
-//     windows: cl /EHsc /DNO_MOO_BUILTINS /I../../src/include test-protocols.cc ../../src/substring.cc ../../src/protocols.cc Shlwapi.lib
+//     macoS:   clang++ -std=c++11 -DNO_MOO_BUILTINS -I../../src/include test-protocols.cc utils.cc ../../src/substring.cc ../../src/protocols.cc
+//     linux:   g++ -std=c++11 -DNO_MOO_BUILTINS -I../../src/include test-protocols.cc utils.cc ../../src/substring.cc ../../src/protocols.cc
+//     windows: cl /EHsc /DNO_MOO_BUILTINS /I../../src/include test-protocols.cc utils.cc ../../src/substring.cc ../../src/protocols.cc Shlwapi.lib
 //              To change the code page of the console:
 //                  chcp 65001
 
 #include <iostream>
 
+#include "utils.h"
 #include "substring.h"
 #include "protocols.h"
 
 using namespace std;
 
 
-
-// -------------------------------------------------------------------------
-bool compare_to_expected(const char *expected, const char *actual) {
-    bool same = strcmp(expected, actual) == 0;
-    
-    if (! same)
-        cout << "  Expected: " << " \"" << expected << "\"" << endl
-             << "  Actual:   " << " \"" << actual   << "\"" << endl;
-    
-    return same;
-}
-
-// -------------------------------------------------------------------------
-void report_failure(const char *protocol, const char *input) {
-    cout << "  " << protocol << " failed \"" << input << "\"" << endl;
-}
 
 // -------------------------------------------------------------------------
 void test_extract_remove_outofband(const char *expected,

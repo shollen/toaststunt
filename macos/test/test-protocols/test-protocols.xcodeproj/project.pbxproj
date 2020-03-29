@@ -10,6 +10,7 @@
 		BB6D5070243084EE001D0723 /* test-protocols.cc in Sources */ = {isa = PBXBuildFile; fileRef = BB6D506F243084EE001D0723 /* test-protocols.cc */; };
 		BB6D50752430862E001D0723 /* substring.cc in Sources */ = {isa = PBXBuildFile; fileRef = BB6D50732430862D001D0723 /* substring.cc */; };
 		BB6D50762430862E001D0723 /* protocols.cc in Sources */ = {isa = PBXBuildFile; fileRef = BB6D50742430862E001D0723 /* protocols.cc */; };
+		BBD1F23C24311B4000E873DE /* utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = BBD1F23B24311B4000E873DE /* utils.cc */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -31,6 +32,8 @@
 		BB6D507224308611001D0723 /* protocols.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = protocols.h; path = ../../../src/include/protocols.h; sourceTree = SOURCE_ROOT; };
 		BB6D50732430862D001D0723 /* substring.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = substring.cc; path = ../../../src/substring.cc; sourceTree = SOURCE_ROOT; };
 		BB6D50742430862E001D0723 /* protocols.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = protocols.cc; path = ../../../src/protocols.cc; sourceTree = SOURCE_ROOT; };
+		BBD1F23A24311B4000E873DE /* utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = utils.h; path = ../utils.h; sourceTree = SOURCE_ROOT; };
+		BBD1F23B24311B4000E873DE /* utils.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = utils.cc; path = ../utils.cc; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -63,8 +66,10 @@
 		BB6D50672430843B001D0723 /* test-protocols */ = {
 			isa = PBXGroup;
 			children = (
+				BBD1F23A24311B4000E873DE /* utils.h */,
 				BB6D507224308611001D0723 /* protocols.h */,
 				BB6D507124308611001D0723 /* substring.h */,
+				BBD1F23B24311B4000E873DE /* utils.cc */,
 				BB6D50742430862E001D0723 /* protocols.cc */,
 				BB6D50732430862D001D0723 /* substring.cc */,
 				BB6D506F243084EE001D0723 /* test-protocols.cc */,
@@ -129,6 +134,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BB6D5070243084EE001D0723 /* test-protocols.cc in Sources */,
+				BBD1F23C24311B4000E873DE /* utils.cc in Sources */,
 				BB6D50762430862E001D0723 /* protocols.cc in Sources */,
 				BB6D50752430862E001D0723 /* substring.cc in Sources */,
 			);

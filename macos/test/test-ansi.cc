@@ -5,9 +5,9 @@
 //  Programming: Perpenso LLC, Tony Tribelli
 //
 // Building manually at the console:
-//     macoS:   clang++ -std=c++11 -DNO_MOO_BUILTINS -I../../src/include test-ansi.cc ../../src/substring.cc ../../src/ansi24.cc
-//     linux:   g++ -std=c++11 -DNO_MOO_BUILTINS -I../../src/include test-ansi.cc ../../src/substring.cc ../../src/ansi24.cc
-//     windows: cl /EHsc /DNO_MOO_BUILTINS /I../../src/include test-ansi.cc ../../src/substring.cc ../../src/ansi24.cc Shlwapi.lib
+//     macoS:   clang++ -std=c++11 -DNO_MOO_BUILTINS -I../../src/include test-ansi.cc utils.cc ../../src/substring.cc ../../src/ansi24.cc
+//     linux:   g++ -std=c++11 -DNO_MOO_BUILTINS -I../../src/include test-ansi.cc utils.cc ../../src/substring.cc ../../src/ansi24.cc
+//     windows: cl /EHsc /DNO_MOO_BUILTINS /I../../src/include test-ansi.cc utils.cc ../../src/substring.cc ../../src/ansi24.cc Shlwapi.lib
 //              To change the code page of the console:
 //                  chcp 65001
 
@@ -17,28 +17,13 @@
 #include <windows.h>
 #endif
 
+#include "utils.h"
 #include "substring.h"
 #include "ansi24.h"
 
 using namespace std;
 
 
-
-// -------------------------------------------------------------------------
-bool compare_to_expected(const char *expected, const char *actual) {
-    bool same = strcmp(expected, actual) == 0;
-    
-    if (! same)
-        cout << "  Expected: " << " \"" << expected << "\"" << endl
-             << "  Actual:   " << " \"" << actual   << "\"" << endl;
-    
-    return same;
-}
-
-// -------------------------------------------------------------------------
-void report_failure(const char *protocol, const char *input) {
-    cout << "  " << protocol << " failed \"" << input << "\"" << endl;
-}
 
 // -------------------------------------------------------------------------
 // Output text once with foreground tags and a second time with background tags.
