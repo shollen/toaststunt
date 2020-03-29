@@ -1377,9 +1377,10 @@ format_char(char       *buffer,
 //                          --> TYPE_ERR E_ARGS  Argument type not supported
 //                          --> TYPE_ERR E_EXEC  Encoding failed
 //                          --> TYPE_ERR E_RANGE Output too long
-// replace_substring        (TYPE_STR orginal string
-//                           TYPE_STR substring to search for
-//                           TYPE_STR substring to replace matches with)
+// replace_substring        (TYPE_STR orginal string,
+//                           TYPE_STR substring to search for,
+//                           TYPE_STR substring to replace matches with,
+//                           {optional} TYPE_INT caseless comparison = { 1, 0 })
 //                          --> TYPE_STR updated string
 //                          --> TYPE_ERR E_RANGE
 //
@@ -1832,21 +1833,29 @@ bf_ansi24_remove_sequences(Var arglist, Byte next, void *vdata, Objid progr)
 // Arguments: TYPE_STR orginal string
 //            TYPE_STR substring to search for
 //            TYPE_STR substring to replace matches with
+//            {optional} TYPE_INT caseless comparison = { 1, 0 }
 // Returns:   TYPE_STR updated string
 //            TYPE_ERR E_RANGE
 // Testing:   ;player:tell(replace_substring(ansi24_replace_tags("The [red]red dog[normal] [bright][blink]barks[normal]."), "barks", "wags its tail"))
+//            ;player:tell(replace_substring(ansi24_replace_tags("The [red]red dog[normal] [bright][blink]barks[normal]."), "barks", "wags its tail", 0))
+//            ;player:tell(replace_substring(ansi24_replace_tags("The [red]red dog[normal] [bright][blink]barks[normal]."), "barks", "wags its tail", 1))
+//            ;player:tell(replace_substring(ansi24_replace_tags("The [red]red dog[normal] [bright][blink]barks[normal]."), "BARKS", "wags its tail", 1))
+//            ;player:tell(replace_substring(ansi24_replace_tags("The [red]red dog[normal] [bright][blink]barks[normal]."), "BARKS", "wags its tail", 0))
 static package
 bf_replace_substring(Var arglist, Byte next, void *vdata, Objid progr) {
     Var        rv;
+    const int  nargs     = (int) arglist.v.list[0].v.num;
     const char *original = arglist.v.list[1].v.str;
     const char *find     = arglist.v.list[2].v.str;
     const char *replace  = arglist.v.list[3].v.str;
+    const bool caseless  = (nargs >= 4) ? arglist.v.list[4].v.num : false;
     char       replacement[256];
     
     if (replace_substring(replacement,
                           sizeof(replacement),
                           original,
                           find,
+                          caseless,
                           replace)) {
         rv.type  = TYPE_STR;
         rv.v.str = str_dup(replacement);
@@ -2185,7 +2194,7 @@ register_ansi24(void)
     register_function("ansi24_remove_tags",      1,  1, bf_ansi24_remove_tags, TYPE_STR);
     register_function("ansi24_remove_sequences", 1,  1, bf_ansi24_remove_sequences, TYPE_STR);
     register_function("ansi24_printf",           1, -1, bf_ansi24_printf, TYPE_STR);
-    register_function("replace_substring",       3,  3, bf_replace_substring, TYPE_STR, TYPE_STR, TYPE_STR);
+    register_function("replace_substring",       3,  4, bf_replace_substring, TYPE_STR, TYPE_STR, TYPE_STR, TYPE_INT);
 }
 
 #endif  // NO_MOO_BUILTINS

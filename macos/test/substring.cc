@@ -30,6 +30,7 @@ replace_remove_substring(char       *replacement,
                          size_t     size,
                          const char *original,
                          const char *find,
+                         bool       caseless,
                          const char *replace)
 {
     bool successful = false;
@@ -50,7 +51,10 @@ replace_remove_substring(char       *replacement,
         const char *found;
         
         // Process the next match
-        while ((found = STRCASESTR(original, find)) != nullptr) {
+        while (   (found =   caseless
+                           ? STRCASESTR (original, find)
+                           : strstr     (original, find))
+               != nullptr) {
             // Copy the text before the match
             size_t leading_len = found - original;
             if (copy_substring(replacement, size, original, leading_len)) {
@@ -90,6 +94,7 @@ replace_substring(char       *replacement,
                   size_t     size,
                   const char *original,
                   const char *find,
+                  bool       caseless,
                   const char *replace)
 {
     bool successful = false;
@@ -104,6 +109,7 @@ replace_substring(char       *replacement,
                                               size,
                                               original,
                                               find,
+                                              caseless,
                                               replace);
         strncpy(replacement, buffer, size);
         replacement[size - 1] = 0;
@@ -115,6 +121,7 @@ replace_substring(char       *replacement,
                                               size,
                                               original,
                                               find,
+                                              caseless,
                                               replace);
 
     return successful;

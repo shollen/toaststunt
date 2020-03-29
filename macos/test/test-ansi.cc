@@ -105,6 +105,7 @@ void test_replace_ansi(const char *expected,
 void test_replace_string(const char *expected,
                          const char *original,
                          const char *find,
+                         const bool caseless,
                          const char *replace = nullptr) {
     char replacement[256];
     
@@ -112,7 +113,8 @@ void test_replace_string(const char *expected,
         if (remove_substring(replacement,
                              sizeof(replacement),
                              original,
-                             find)) {
+                             find,
+                             caseless)) {
             if (strcmp(expected, replacement) != 0)
                 cout << "  Expected: " << " \"" << expected    << "\"" << endl
                      << "  Actual:   " << " \"" << replacement << "\"" << endl;
@@ -125,6 +127,7 @@ void test_replace_string(const char *expected,
                               sizeof(replacement),
                               original,
                               find,
+                              caseless,
                               replace)) {
             if (strcmp(expected, replacement) != 0)
                 cout << "  Expected: " << " \"" << expected    << "\"" << endl
@@ -434,37 +437,37 @@ int main(void) {
         || buffer[0] != 0)
         cout << "  remove_ansi_sequences() original empty test failed" << endl;
 
-    if (replace_substring(nullptr, 1, "", "", ""))
+    if (replace_substring(nullptr, 1, "", "", false, ""))
         cout << "  replace_substring() buffer nullptr test failed" << endl;
-    if (replace_substring(buffer, sizeof(buffer), nullptr, "", ""))
+    if (replace_substring(buffer, sizeof(buffer), nullptr, "", false, ""))
         cout << "  replace_substring() original nullptr test failed" << endl;
-    if (replace_substring(buffer, sizeof(buffer), "", nullptr, ""))
+    if (replace_substring(buffer, sizeof(buffer), "", nullptr, false, ""))
         cout << "  replace_substring() find nullptr test failed" << endl;
-    if (replace_substring(buffer, sizeof(buffer), "", "", nullptr))
+    if (replace_substring(buffer, sizeof(buffer), "", "", false, nullptr))
         cout << "  replace_substring() replace nullptr test failed" << endl;
-    if (replace_substring(buffer, 0, "", "", ""))
+    if (replace_substring(buffer, 0, "", "", false, ""))
         cout << "  replace_substring() buffer size 0 test failed" << endl;
-    if (replace_substring(buffer, sizeof(buffer), "", "", ""))
+    if (replace_substring(buffer, sizeof(buffer), "", "", false, ""))
         cout << "  replace_substring() find size 0 test failed" << endl;
     buffer[0] = 0;
-    if (! replace_substring(buffer, sizeof(buffer), buffer, "1", ""))
+    if (! replace_substring(buffer, sizeof(buffer), buffer, "1", false, ""))
         cout << "  replace_substring() destination is source test failed" << endl;
     buffer[0] = 1;
-    if (   (! replace_substring(buffer, sizeof(buffer), "", "1", ""))
+    if (   (! replace_substring(buffer, sizeof(buffer), "", "1", false, ""))
         || buffer[0] != 0)
         cout << "  replace_substring() original empty test failed" << endl;
-    if (remove_substring(nullptr, 1, "", ""))
+    if (remove_substring(nullptr, 1, "", "", false))
         cout << "  remove_substring() buffer nullptr test failed" << endl;
-    if (remove_substring(buffer, sizeof(buffer), nullptr, ""))
+    if (remove_substring(buffer, sizeof(buffer), nullptr, "", false))
         cout << "  remove_substring() original nullptr test failed" << endl;
-    if (remove_substring(buffer, sizeof(buffer), "", nullptr))
+    if (remove_substring(buffer, sizeof(buffer), "", nullptr, false))
         cout << "  remove_substring() find nullptr test failed" << endl;
-    if (remove_substring(buffer, 0, "", ""))
+    if (remove_substring(buffer, 0, "", "", false))
         cout << "  remove_substring() buffer size 0 test failed" << endl;
-    if (remove_substring(buffer, sizeof(buffer), "", ""))
+    if (remove_substring(buffer, sizeof(buffer), "", "", false))
         cout << "  remove_substring() find size 0 test failed" << endl;
     buffer[0] = 1;
-    if (   (! remove_substring(buffer, sizeof(buffer), "", "1"))
+    if (   (! remove_substring(buffer, sizeof(buffer), "", "1", false))
         || buffer[0] != 0)
         cout << "  remove_substring() original empty test failed" << endl;
 
@@ -822,29 +825,33 @@ int main(void) {
     // from a line of text. Substrings that may be utf-8.
 
     cout << "Testing replace substring" << endl;
+    test_replace_string("This is the WRONG substring.",
+                        "This is the WRONG substring.", "wrong", false, "correct");
     test_replace_string("This is the correct substring.",
-                        "This is the WRONG substring.", "wrong", "correct");
+                        "This is the WRONG substring.", "wrong", true, "correct");
     test_replace_string("This substring is correct correct correct",
-                        "This substring is WRONG wrong Wrong", "wrong", "correct");
+                        "This substring is WRONG wrong Wrong", "wrong", true, "correct");
     test_replace_string("Correct I say.",
-                        "wrong I say.", "Wrong", "Correct");
+                        "Wrong I say.", "Wrong", false, "Correct");
     test_replace_string("This is the 𐍈correct\xf0\x90\x8d\x88 substring with utf-8.",
-                        "This is the 𐍈WRONG\xf0\x90\x8d\x88 substring with utf-8.", "wrong", "correct");
+                        "This is the 𐍈WRONG\xf0\x90\x8d\x88 substring with utf-8.", "wrong", true, "correct");
     test_replace_string("This is utf-8 replaced with utf-8 \x24\xC2\xA2\xE2\x82\xAC\xF0\x90\x8D\x88",
-                        "This is utf-8 replaced with utf-8 \x24\x24\xF0\x90\x8D\x88\xF0\x90\x8D\x88", "\x24\xF0\x90\x8D\x88", "\xC2\xA2\xE2\x82\xAC");
-    test_replace_string("", "", "search", "replace");
+                        "This is utf-8 replaced with utf-8 \x24\x24\xF0\x90\x8D\x88\xF0\x90\x8D\x88", "\x24\xF0\x90\x8D\x88", false, "\xC2\xA2\xE2\x82\xAC");
+    test_replace_string("", "", "search", false, "replace");
 
     cout << "Testing remove substring" << endl;
+    test_replace_string("This is the correctPLUS substring.",
+                        "This is the correctPLUS substring.", "plus", false, nullptr);
     test_replace_string("This is the correct substring.",
-                        "This is the correctPLUS substring.", "plus", nullptr);
+                        "This is the correctPLUS substring.", "plus", true, nullptr);
     test_replace_string("This is the correct𐍈\xf0\x90\x8d\x88 substring with utf-8.",
-                        "This is the correct𐍈PLUS\xf0\x90\x8d\x88 substring with utf-8.", "plus", nullptr);
+                        "This is the correct𐍈PLUS\xf0\x90\x8d\x88 substring with utf-8.", "plus", true, nullptr);
     
     // Try removal again but let the source and destination buffers be the same
     strncpy(buffer,
             "This is the correct𐍈PLUS\xf0\x90\x8d\x88 substring with utf-8.",
             sizeof(buffer));
-    if (   (! replace_substring(buffer, sizeof(buffer), buffer, "plus"))
+    if (   (! replace_substring(buffer, sizeof(buffer), buffer, "plus", true))
         || strcmp(buffer, "This is the correct𐍈\xf0\x90\x8d\x88 substring with utf-8.") != 0)
         cout << "  replace_substring() destination is source test failed" << endl;
     
@@ -852,7 +859,7 @@ int main(void) {
     strncpy(buffer,
             "This is the correct𐍈PLUS\xf0\x90\x8d\x88 substring with utf-8.",
             sizeof(buffer));
-    if (   (! remove_substring(buffer, sizeof(buffer), buffer, "plus"))
+    if (   (! remove_substring(buffer, sizeof(buffer), buffer, "plus", true))
         || strcmp(buffer, "This is the correct𐍈\xf0\x90\x8d\x88 substring with utf-8.") != 0)
         cout << "  remove_substring() destination is source test failed" << endl;
 

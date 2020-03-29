@@ -48,14 +48,16 @@ bool replace_substring (char       *replacement,
                         size_t     size,
                         const char *original,
                         const char *find,
+                        bool       caseless,
                         const char *replace = "");  // Empty to remove substr
 
 inline bool
 remove_substring (char       *replacement,
                   size_t     size,
                   const char *original,
-                  const char *find) {
-    return replace_substring(replacement, size, original, find);
+                  const char *find,
+                  bool       caseless) {
+    return replace_substring(replacement, size, original, find, caseless);
 }
 
 #endif  /* substring_h */
