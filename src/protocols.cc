@@ -21,14 +21,14 @@ using namespace std;
 // Get the the protocol starting and ending substrings
 static bool get_protocol_start_end(char *start_buffer, size_t start_size,
                                    char *end_buffer,   size_t end_size,
-                                   char protocol) {
+                                   uint8_t protocol) {
     // This is a private function so its safe to require that
     // pointers have been checked for null by the caller
     
     bool successful = false;
 
     // Handle the MXP protocol
-    if (protocol      == 27
+    if (protocol      == mxp_id
         && start_size >= 3
         && end_size   >= 2) {
         start_buffer[0] = '\x1b';
@@ -39,14 +39,17 @@ static bool get_protocol_start_end(char *start_buffer, size_t start_size,
         successful      = true;
     }
     // Handle the telnet based protocols
-    else if (   start_size >= 4
+    else if ((   protocol == 0
+              || protocol == gmcp_id
+              || protocol == msdp_id)
+             && start_size >= 4
              && end_size   >= 3) {
-        start_buffer[0] = '\xff';
-        start_buffer[1] = '\xfa';
+        start_buffer[0] = telnet_interpret_as_command;
+        start_buffer[1] = telnet_start_subnegotiation;
         start_buffer[2] = protocol;
         start_buffer[3] = 0;
-        end_buffer[0]   = '\xff';
-        end_buffer[1]   = '\xf0';
+        end_buffer[0]   = telnet_interpret_as_command;
+        end_buffer[1]   = telnet_end_subnegotiation;
         end_buffer[2]   = 0;
         successful      = true;
     }
@@ -65,8 +68,8 @@ bool
 extract_remove_protocol(char       *replacement,
                         size_t     size,
                         const char *original,
-                        bool       extract,
-                        char       protocol)
+                        uint8_t    protocol,
+                        bool       extract)
 {
     bool successful = false;
     
@@ -129,6 +132,107 @@ extract_remove_protocol(char       *replacement,
     return successful;
 }
 
+// -----------------------------------------------------------------------------
+bool
+protocol_request(uint8_t protocol)
+{
+    bool successful = false;
+
+    if (   protocol == gmcp_id
+        || protocol == msdp_id
+        || protocol == mxp_id) {
+        successful = true;
+    }
+
+    return successful;
+}
+
+// -----------------------------------------------------------------------------
+bool
+protocol_extract(char       *replacement,
+                 size_t     size,
+                 const char *original,
+                 uint8_t    protocol)
+{
+    return extract_remove_protocol(replacement,
+                                   size,
+                                   original,
+                                   protocol,
+                                   true);
+}
+
+// -----------------------------------------------------------------------------
+bool
+protocol_remove(char       *replacement,
+                size_t     size,
+                const char *original,
+                uint8_t    protocol)
+{
+    return extract_remove_protocol(replacement,
+                                   size,
+                                   original,
+                                   protocol,
+                                   false);
+}
+
+// -----------------------------------------------------------------------------
+bool
+protocol_create(char       *message,
+                size_t     size,
+                const char *body,
+                uint8_t    protocol,
+                uint8_t    tag)
+{
+    bool successful = false;
+    char start_pattern[8], end_pattern[8];
+
+    if (get_protocol_start_end(start_pattern, sizeof(start_pattern),
+                               end_pattern  , sizeof(end_pattern),
+                               protocol)) {
+        
+        // Handle the MXP protocol
+        if (protocol == 27) {
+            char tag_str[32];
+            
+            snprintf(tag_str, sizeof(tag_str), "%d", tag);
+            tag_str[sizeof(tag_str) - 1] = 0;
+            successful =    copy_substring(message,
+                                           size,
+                                           start_pattern,
+                                           strlen(start_pattern))
+                         && copy_substring(message,
+                                           size,
+                                           tag_str,
+                                           strlen(tag_str))
+                         && copy_substring(message,
+                                           size,
+                                           end_pattern,
+                                           strlen(end_pattern))
+                         && copy_substring(message,
+                                           size,
+                                           body,
+                                           strlen(body));
+        }
+        // Handle the telnet based protocols
+        else {
+            successful =    copy_substring(message,
+                                           size,
+                                           start_pattern,
+                                           strlen(start_pattern))
+                         && copy_substring(message,
+                                           size,
+                                           body,
+                                           strlen(body))
+                         && copy_substring(message,
+                                           size,
+                                           end_pattern,
+                                           strlen(end_pattern));
+        }
+    }
+
+    return successful;
+}
+
 
 
 // -----------------------------------------------------------------------------
@@ -136,6 +240,12 @@ extract_remove_protocol(char       *replacement,
 //
 // protocols_version ()
 //                   --> TYPE_STR version
+// protocols_request ({TYPE_INT protocol = { 201, 69, 27 })
+//                                           201 = GMCP
+//                                            69 = MSDP
+//                                            27 = MXP}
+//                   --> TYPE_INT 1
+//                   --> TYPE_ERR E_RANGE
 // protocols_extract (TYPE_STR string with out-of-band data,
 //                   {optional} TYPE_INT protocol = { 0, 201, 69, 27 })
 //                                                    0 = telnet
@@ -183,9 +293,39 @@ bf_protocols_version(Var arglist, Byte next, void *vdata, Objid progr)
 }
 
 // -----------------------------------------------------------------------------
+// Request the use of a protocol
+// Arguments: TYPE_INT protocol = { 201, 69, 27 }
+//                                201 = GMCP
+//                                 69 = MSDP
+//                                 27 = MXP
+// Return:  TYPE_INT 1
+//          TYPE_ERR E_RANGE
+// Testing: ;player:tell(protocols_request(201))
+//          ;player:tell(protocols_request(69))
+//          ;player:tell(protocols_request(27))
+static package
+bf_protocols_request(Var arglist, Byte next, void *vdata, Objid progr)
+{
+    Var           rv;
+    const uint8_t protocol = arglist.v.list[1].v.num;
+
+    if (protocol_request(protocol)) {
+        rv.type  = TYPE_INT;
+        rv.v.num = 1;
+    }
+    else {
+        free_var(arglist);
+        return make_error_pack(E_RANGE);
+    }
+    
+    free_var(arglist);
+    return make_var_pack(rv);
+}
+
+// -----------------------------------------------------------------------------
 // Extract out-of-band data
 // Arguments: TYPE_STR string with out-of-band data,
-//            {optional} TYPE_INT protocol = { 0, 201, 69, 27 })
+//            {optional} TYPE_INT protocol = { 0, 201, 69, 27 }
 //                                             0 = telnet
 //                                           201 = GMCP
 //                                            69 = MSDP
@@ -202,14 +342,13 @@ bf_protocols_extract(Var arglist, Byte next, void *vdata, Objid progr) {
     Var        rv;
     const int  nargs     = (int) arglist.v.list[0].v.num;
     const char *original = arglist.v.list[1].v.str;
-    char       protocol  = (nargs >= 2) ? arglist.v.list[2].v.num : 0;
+    uint8_t    protocol  = (nargs >= 2) ? arglist.v.list[2].v.num : 0;
     char       replacement[256];
     
-    if (extract_remove_protocol(replacement,
-                                sizeof(replacement),
-                                original,
-                                true,
-                                protocol)) {
+    if (protocol_extract(replacement,
+                         sizeof(replacement),
+                         original,
+                         protocol)) {
         rv.type  = TYPE_STR;
         rv.v.str = str_dup(replacement);
     }
@@ -225,7 +364,7 @@ bf_protocols_extract(Var arglist, Byte next, void *vdata, Objid progr) {
 // -----------------------------------------------------------------------------
 // Remove out-of-band data
 // Arguments: TYPE_STR string with out-of-band data,
-//            {optional} TYPE_INT protocol = { 0, 201, 69, 27 })
+//            {optional} TYPE_INT protocol = { 0, 201, 69, 27 }
 //                                             0 = telnet
 //                                           201 = GMCP
 //                                            69 = MSDP
@@ -242,14 +381,13 @@ bf_protocols_remove(Var arglist, Byte next, void *vdata, Objid progr) {
     Var        rv;
     const int  nargs     = (int) arglist.v.list[0].v.num;
     const char *original = arglist.v.list[1].v.str;
-    char       protocol  = (nargs >= 2) ? arglist.v.list[2].v.num : 0;
+    uint8_t    protocol  = (nargs >= 2) ? arglist.v.list[2].v.num : 0;
     char       replacement[256];
     
-    if (extract_remove_protocol(replacement,
-                                sizeof(replacement),
-                                original,
-                                false,
-                                protocol)) {
+    if (protocol_remove(replacement,
+                        sizeof(replacement),
+                        original,
+                        protocol)) {
         rv.type  = TYPE_STR;
         rv.v.str = str_dup(replacement);
     }
@@ -273,61 +411,29 @@ bf_protocols_remove(Var arglist, Byte next, void *vdata, Objid progr) {
 //            {optional} TYPE_STR MXP protocol tag)
 // Returns:   TYPE_STR string with out-of-band data
 //            TYPE_ERR E_RANGE
-// Testing:   ;player:tell(replace_substring(replace_substring(replace_substring(protocols_create("message"), chr(255), "{FF}"), chr(250), "{FA}"), chr(240), "{F0}"))
-//            ;player:tell(replace_substring(replace_substring(replace_substring(protocols_create("message", 0), chr(255), "{FF}"), chr(250), "{FA}"), chr(240), "{F0}"))
-//            ;player:tell(replace_substring(replace_substring(replace_substring(replace_substring(protocols_create("message", 201), chr(255), "{FF}"), chr(250), "{FA}"), chr(240), "{F0}"), chr(201), "{GMCP}"))
-//            ;player:tell(replace_substring(replace_substring(replace_substring(replace_substring(protocols_create("message", 69), chr(255), "{FF}"), chr(250), "{FA}"), chr(240), "{F0}"), chr(69), "{MSDP}"))
+// Testing:   ;player:tell(replace_substring(replace_substring(replace_substring(protocols_create("message"), chr(255), "{IAC}"), chr(250), "{SB}"), chr(240), "{SE}"))
+//            ;player:tell(replace_substring(replace_substring(replace_substring(protocols_create("message", 0), chr(255), "{IAC}"), chr(250), "{SB}"), chr(240), "{SE}"))
+//            ;player:tell(replace_substring(replace_substring(replace_substring(replace_substring(protocols_create("message", 201), chr(201), "{GMCP}"), chr(255), "{IAC}"), chr(250), "{SB}"), chr(240), "{SE}"))
+//            ;player:tell(replace_substring(replace_substring(replace_substring(replace_substring(protocols_create("message", 69), chr(69), "{MSDP}"), chr(255), "{IAC}"), chr(250), "{SB}"), chr(240), "{SE}"))
 //            ;player:tell(replace_substring(protocols_create("message", 27), chr(27), "{esc}"))
 //            ;player:tell(replace_substring(protocols_create("message", 27, 99), chr(27), "{esc}"))
 static package
 bf_protocols_create(Var arglist, Byte next, void *vdata, Objid progr) {
     Var        rv;
     const int  nargs     = (int) arglist.v.list[0].v.num;
-    const char *message  = arglist.v.list[1].v.str;
-    const char protocol  = (nargs >= 2) ? arglist.v.list[2].v.num : 0;
-    const int  tag       = (nargs >= 3) ? (int) arglist.v.list[3].v.num : 0;
-    char       start_pattern[8], end_pattern[8];
-    char       replacement[256];
-
-    if (get_protocol_start_end(start_pattern, sizeof(start_pattern),
-                               end_pattern  , sizeof(end_pattern),
-                               protocol)) {
-        char   *dest = replacement;
-        size_t size  = sizeof(replacement);
-        
-        // Handle the MXP protocol
-        if (protocol == 27) {
-            char tag_str[32];
-            
-            snprintf(tag_str, sizeof(tag_str), "%d", tag);
-            tag_str[sizeof(tag_str) - 1] = 0;
-            if (   copy_substring(dest, size, start_pattern, strlen(start_pattern))
-                && copy_substring(dest, size, tag_str,       strlen(tag_str))
-                && copy_substring(dest, size, end_pattern,   strlen(end_pattern))
-                && copy_substring(dest, size, message,       strlen(message))) {
-            } else {
-                free_var(arglist);
-                return make_error_pack(E_RANGE);
-            }
-        }
-        // Handle the telnet based protocols
-        else {
-            if (   copy_substring(dest, size, start_pattern, strlen(start_pattern))
-                && copy_substring(dest, size, message,       strlen(message))
-                && copy_substring(dest, size, end_pattern,   strlen(end_pattern))) {
-            } else {
-                free_var(arglist);
-                return make_error_pack(E_RANGE);
-            }
-        }
+    const char *body     = arglist.v.list[1].v.str;
+    uint8_t    protocol  = (nargs >= 2) ? arglist.v.list[2].v.num : 0;
+    uint8_t    tag       = (nargs >= 3) ? (int) arglist.v.list[3].v.num : 0;
+    char       message[256];
+    
+    if (protocol_create(message, sizeof(message), body, protocol, tag)) {
+        rv.type  = TYPE_STR;
+        rv.v.str = str_dup(message);
     } else {
         free_var(arglist);
         return make_error_pack(E_RANGE);
     }
-
-    rv.type  = TYPE_STR;
-    rv.v.str = str_dup(replacement);
-
+    
     free_var(arglist);
     return make_var_pack(rv);
 }
@@ -338,6 +444,7 @@ void
 register_protocols(void)
 {
     register_function("protocols_version", 0,  0, bf_protocols_version);
+    register_function("protocols_request", 1,  1, bf_protocols_request, TYPE_INT);
     register_function("protocols_extract", 1,  2, bf_protocols_extract, TYPE_STR, TYPE_INT);
     register_function("protocols_remove",  1,  2, bf_protocols_remove, TYPE_STR, TYPE_INT);
     register_function("protocols_create",  1,  3, bf_protocols_create, TYPE_STR, TYPE_INT, TYPE_INT);
