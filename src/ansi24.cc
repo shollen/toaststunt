@@ -170,6 +170,26 @@ set_ansi_foreground_mode(uint64_t id, ansi_modes mode)
     return ansi_foreground_mode[id];
 }
 
+// -----------------------------------------------------------------------------
+// Remove the definitions for ansi color bits and foreground/background modes
+// for a given non-zero ID
+// Arguments: TYPE_INT id
+// Returns:   TYPE_INT successful = { 1, 0 }
+// Testing:   See bf_ansi24_get_color_bits() and bf_ansi24_is_foreground()
+bool
+remove_modes(uint64_t id)
+{
+    bool successful = false;
+    
+    if (id != 0) {
+        ansi_color_bits_mode.erase(id);
+        ansi_foreground_mode.erase(id);
+        successful = true;
+    }
+    
+    return successful;
+}
+
 
 
 // -----------------------------------------------------------------------------
@@ -596,10 +616,11 @@ static int shades_to_sgr[3 * 3 * 3] = {
 // Returns:       true    Sequence was created
 //                false   Error
 bool
-create_ansi_string (ansi_string &string,
-                    const char  *name,
-                    ansi_modes  foreground,
-                    ansi_modes  color_bits)
+create_ansi_string(ansi_string &string,
+                   const char  *name,
+                   uint64_t    id,
+                   ansi_modes  foreground,
+                   ansi_modes  color_bits)
 {
     bool successful = false;
     int  color_index, color_value, red, green, blue;
@@ -609,9 +630,9 @@ create_ansi_string (ansi_string &string,
     
     // See if the default ansi modes are specified
     if (color_bits == ansi_default)
-        color_bits = get_ansi_color_bits_mode(0);
+        color_bits = get_ansi_color_bits_mode(id);
     if (foreground == ansi_default)
-        foreground = get_ansi_foreground_mode(0);
+        foreground = get_ansi_foreground_mode(id);
 
     // Maybe the color was specified by name
     if ((color_index = name_to_index(name)) != -1) {
@@ -621,7 +642,10 @@ create_ansi_string (ansi_string &string,
                 // create a 24-bit ansi sequence
                 int rgb = standard_colors[color_index].rgb;
                 if (rgb != -1)
-                    successful = create_ansi24_string(string, rgb, foreground);
+                    successful = create_ansi24_string(string,
+                                                      rgb,
+                                                      id,
+                                                      foreground);
                 
                 // If successful we are done,
                 // otherwise fall through and try again with fewer color bits
@@ -634,7 +658,10 @@ create_ansi_string (ansi_string &string,
                 // create an 8-bit ansi sequence
                 int pal = standard_colors[color_index].pal;
                 if (pal != -1)
-                    successful = create_ansi8_string(string, pal, foreground);
+                    successful = create_ansi8_string(string,
+                                                     pal,
+                                                     id,
+                                                     foreground);
                 
                 // If successful we are done,
                 // otherwise fall through and try again with fewer color bits
@@ -648,13 +675,15 @@ create_ansi_string (ansi_string &string,
                 int fg = standard_colors[color_index].foreground;
                 if (cb != -1) {
                     // In case there is no escape sequence, just a state change
-                    color_bits    = set_ansi_color_bits_mode(0, (ansi_modes) cb);
+                    color_bits    = set_ansi_color_bits_mode(id,
+                                                             (ansi_modes) cb);
                     string.buf[0] = 0;
                     successful    = true;
                 }
                 else if (fg != -1) {
                     // In case there is no escape sequence, just a state change
-                    foreground    = set_ansi_foreground_mode(0, (ansi_modes) fg);
+                    foreground    = set_ansi_foreground_mode(id,
+                                                             (ansi_modes) fg);
                     string.buf[0] = 0;
                     successful    = true;
                 }
@@ -698,6 +727,7 @@ create_ansi_string (ansi_string &string,
                                                       red,
                                                       green,
                                                       blue,
+                                                      id,
                                                       foreground);
                 break;
                 
@@ -719,6 +749,7 @@ create_ansi_string (ansi_string &string,
                 }
                 successful = create_ansi8_string(string,
                                                  color_value,
+                                                 id,
                                                  foreground);
                 break;
                 
@@ -768,11 +799,12 @@ create_ansi4_string(ansi_string &string, uint8_t sgr_code)
 bool
 create_ansi8_string(ansi_string &string,
                     uint8_t     palette_index,
+                    uint64_t    id,
                     ansi_modes  foreground)
 {
     string.buf[0] = 0;  // Just in case sprintf fails
     if (foreground == ansi_default)
-        foreground = get_ansi_foreground_mode(0);
+        foreground = get_ansi_foreground_mode(id);
     
     return sprintf(string.buf,
                    "\x1b[%d;5;%dm",
@@ -785,11 +817,12 @@ create_ansi24_string (ansi_string &string,
                       uint8_t     red,
                       uint8_t     green,
                       uint8_t     blue,
+                      uint64_t    id,
                       ansi_modes  foreground)
 {
     string.buf[0] = 0;  // Just in case sprintf fails
     if (foreground == ansi_default)
-        foreground = get_ansi_foreground_mode(0);
+        foreground = get_ansi_foreground_mode(id);
     
     return sprintf(string.buf,
                    "\x1b[%d;2;%d;%d;%dm",
@@ -819,6 +852,7 @@ static bool
 replace_remove_color_tags(char       *replacement,
                           size_t     size,
                           const char *original,
+                          uint64_t   id,
                           bool       remove)
 {
     bool successful = false;
@@ -853,7 +887,7 @@ replace_remove_color_tags(char       *replacement,
                 // and "test" it by attempting a conversions to ansi
                 memcpy(name.buf, bracket_open + 1, name_length);
                 name.buf[name_length] = 0;
-                if (create_ansi_string(ansi, name.buf)) {
+                if (create_ansi_string(ansi, name.buf, id)) {
                     // Copy any leading characters and then
                     // replace the bracketed name with ansi.
                     // Unless the remove flag is set then
@@ -923,7 +957,8 @@ replace_remove_color_tags(char       *replacement,
 bool
 replace_color_tags_with_ansi(char       *replacement,
                              size_t     size,
-                             const char *original)
+                             const char *original,
+                             uint64_t   id)
 {
     bool successful = false;
     
@@ -936,6 +971,7 @@ replace_color_tags_with_ansi(char       *replacement,
         successful = replace_remove_color_tags(buffer,
                                                size,
                                                original,
+                                               id,
                                                false);
         strncpy(replacement, buffer, size);
         replacement[size - 1] = 0;
@@ -946,6 +982,7 @@ replace_color_tags_with_ansi(char       *replacement,
         successful = replace_remove_color_tags(replacement,
                                                size,
                                                original,
+                                               id,
                                                false);
     
     return successful;
@@ -958,9 +995,10 @@ replace_color_tags_with_ansi(char       *replacement,
 bool
 remove_color_tags(char       *replacement,
                   size_t     size,
-                  const char *original)
+                  const char *original,
+                  uint64_t)
 {
-    return replace_remove_color_tags(replacement, size, original, true);
+    return replace_remove_color_tags(replacement, size, original, 0, true);
 }
 
 // -----------------------------------------------------------------------------
@@ -1011,7 +1049,8 @@ scan_for_terminator(const char *src)
 bool
 remove_ansi_sequences(char       *replacement,
                       size_t     size,
-                      const char *original)
+                      const char *original,
+                      uint64_t   id)
 {
     bool successful = false;
     
@@ -1088,10 +1127,10 @@ display_color_for_name(ansi_modes color_bits,
             create_ansi4_string  (ansi, fg4);
             break;
         case ansi_8:
-            create_ansi8_string  (ansi, pal, ansi_fore);
+            create_ansi8_string  (ansi, pal, 0, ansi_fore);
             break;
         case ansi_24:
-            create_ansi24_string (ansi, rgb, ansi_fore);
+            create_ansi24_string (ansi, rgb, 0, ansi_fore);
             break;
         default:
             ansi.buf[0] = 0;
@@ -1113,14 +1152,14 @@ display_color_for_name(ansi_modes color_bits,
             create_ansi4_string (ansi, bg4);
             break;
         case ansi_8:
-            create_ansi8_string (ansi, rgb != 0 ? 0 : 7, ansi_fore);
+            create_ansi8_string (ansi, rgb != 0 ? 0 : 7, 0, ansi_fore);
             copy_substring      (buffer, size, ansi.buf, strlen(ansi.buf));
-            create_ansi8_string (ansi, pal, ansi_back);
+            create_ansi8_string (ansi, pal, 0, ansi_back);
             break;
         case ansi_24:
-            create_ansi24_string (ansi, rgb != 0 ? 0 : 0xbbbbbb, ansi_fore);
+            create_ansi24_string (ansi, rgb != 0 ? 0 : 0xbbbbbb, 0, ansi_fore);
             copy_substring       (buffer, size, ansi.buf, strlen(ansi.buf));
-            create_ansi24_string (ansi, rgb, ansi_back);
+            create_ansi24_string (ansi, rgb, 0, ansi_back);
             break;
         default:
             ansi.buf[0] = 0;
@@ -1331,10 +1370,10 @@ format_char(char       *buffer,
         && size    > 0) {
         // If no formatting its safe to process the value
         // as a utf-8 codepoint.
-        // Do not process ascii or extended ascii as a codepoint.
+        // Do not process ascii as a codepoint.
         if (   *format       == '%'
             && *(format + 1) == 'c'
-            && character     >= 256) {
+            && character     >= 128) {
             uint8_t utf8[8];
             
             // Output the utf-8 multibyte sequence as a string
@@ -1370,7 +1409,10 @@ format_char(char       *buffer,
 // ansi24_set_foreground    (TYPE_INT id,
 //                           TYPE_INT foreground = { 1, 0 })
 //                          --> TYPE_INT current setting = { 1, 0 }
+// ansi24_remove_modes      (TYPE_INT id)
+//                          --> TYPE_INT successful = { 1, 0 }
 // ansi24_named_sequence    (TYPE_STR color name,
+//                           {optional} TYPE_INT id,
 //                           {optional} TYPE_INT foreground = { 1, 0 },
 //                           {optional} TYPE_INT color bits = { 4, 8, 24 })
 //                          --> TYPE_STR ansi escape sequence
@@ -1379,16 +1421,19 @@ format_char(char       *buffer,
 //                          --> TYPE_STR ansi escape sequence
 //                          --> TYPE_ERR E_RANGE
 // ansi24_8bit_sequence     (TYPE_INT ansi palette index = { 0..255 },
+//                           {optional} TYPE_INT id,
 //                           {optional} TYPE_INT foreground = { 1, 0 })
 //                          --> TYPE_STR ansi escape sequence
 //                          --> TYPE_ERR E_RANGE
 // ansi24_24bit_sequence    (TYPE_INT red   component = { 0..255 },
 //                           TYPE_INT green component = { 0..255 },
 //                           TYPE_INT blue  component = { 0..255 },
+//                           {optional} TYPE_INT id,
 //                           {optional} TYPE_INT foreground = { 1, 0 })
 //                          --> TYPE_STR ansi escape sequence
 //                          --> TYPE_ERR E_RANGE
-// ansi24_replace_tags      (TYPE_STR string with color tags)
+// ansi24_replace_tags      (TYPE_STR string with color tags,
+//                           TYPE_INT id)
 //                          --> TYPE_STR string with ansi escape sequences
 //                          --> TYPE_ERR E_RANGE
 // ansi24_remove_tags       (TYPE_STR string with color tags)
@@ -1496,7 +1541,7 @@ bf_ansi24_version(Var arglist, Byte next, void *vdata, Objid progr)
 // Arguments: TYPE_INT id
 // Return:    TYPE_INT color bits = { 4, 8, 24 }
 // Testing:   ;player:tell(tostr(ansi24_get_color_bits(0)))
-//            ;player:tell(tostr(ansi24_set_color_bits(0, 4)))
+//            ;player:tell(tostr(ansi24_remove_modes(0)))
 //            ;player:tell(tostr(ansi24_get_color_bits(0)))
 //            ;player:tell(tostr(ansi24_set_color_bits(0, 24)))
 //            ;player:tell(tostr(ansi24_get_color_bits(0)))
@@ -1506,13 +1551,17 @@ bf_ansi24_version(Var arglist, Byte next, void *vdata, Objid progr)
 //            ;player:tell(tostr(ansi24_get_color_bits(0)))
 //            ;player:tell(tostr(ansi24_set_color_bits(0, 42)))
 //            ;player:tell(tostr(ansi24_get_color_bits(0)))
-//            ;player:tell(tostr(ansi24_set_color_bits(0, 8)))
-//            ;player:tell(tostr(ansi24_get_color_bits(8)))
 //            ;player:tell(tostr(ansi24_set_color_bits(0, 24)))
 //            ;player:tell(tostr(ansi24_get_color_bits(24)))
+//            ;player:tell(tostr(ansi24_set_color_bits(0, 8)))
+//            ;player:tell(tostr(ansi24_get_color_bits(8)))
 //            ;player:tell(tostr(ansi24_set_color_bits(4, 4)))
 //            ;player:tell(tostr(ansi24_get_color_bits(4)))
 //            ;player:tell(tostr(ansi24_get_color_bits(0)))
+//            ;player:tell(tostr(ansi24_remove_modes(4)))
+//            ;player:tell(tostr(ansi24_get_color_bits(4)))
+//            ;player:tell(tostr(ansi24_remove_modes(42)))
+//            ;player:tell(tostr(ansi24_get_color_bits(42)))
 static package
 bf_ansi24_get_color_bits(Var arglist, Byte next, void *vdata, Objid progr)
 {
@@ -1547,6 +1596,8 @@ bf_ansi24_get_color_bits(Var arglist, Byte next, void *vdata, Objid progr)
 // Arguments: TYPE_INT id
 // Return:    TYPE_INT foreground = 1, background = 0
 // Testing:   ;player:tell(tostr(ansi24_is_foreground(0)))
+//            ;player:tell(tostr(ansi24_remove_modes(0)))
+//            ;player:tell(tostr(ansi24_is_foreground(0)))
 //            ;player:tell(tostr(ansi24_set_foreground(0, 0)))
 //            ;player:tell(tostr(ansi24_is_foreground(0)))
 //            ;player:tell(tostr(ansi24_set_foreground(0, 42)))
@@ -1554,6 +1605,8 @@ bf_ansi24_get_color_bits(Var arglist, Byte next, void *vdata, Objid progr)
 //            ;player:tell(tostr(ansi24_set_foreground(4, 0)))
 //            ;player:tell(tostr(ansi24_is_foreground(4)))
 //            ;player:tell(tostr(ansi24_is_foreground(8)))
+//            ;player:tell(tostr(ansi24_remove_modes(4)))
+//            ;player:tell(tostr(ansi24_is_foreground(4)))
 static package
 bf_ansi24_is_foreground(Var arglist, Byte next, void *vdata, Objid progr)
 {
@@ -1633,37 +1686,65 @@ bf_ansi24_set_foreground(Var arglist, Byte next, void *vdata, Objid progr)
 }
 
 // -----------------------------------------------------------------------------
+// Remove the definitions for ansi color bits and foreground/background modes
+// for a given non-zero ID
+// Arguments: TYPE_INT id
+// Returns:   TYPE_INT successful = { 1, 0 }
+// Testing:   See bf_ansi24_get_color_bits() and bf_ansi24_is_foreground()
+static package
+bf_ansi24_remove_modes(Var arglist, Byte next, void *vdata, Objid progr)
+{
+    Var      rv;
+    uint64_t id = (uint64_t) arglist.v.list[1].v.num;
+    
+    rv.type  = TYPE_INT;
+    rv.v.num = remove_modes(id) ? 1 : 0;
+    
+    free_var(arglist);
+    return make_var_pack(rv);
+}
+
+// -----------------------------------------------------------------------------
 // Create an ansi escape sequence from a name or a numeric value
 // Arguments: (TYPE_STR color name or numeric value
+//            {optional} TYPE_INT id,
 //            {optional} TYPE_INT foreground = { 1, 0 }
 //            {optional} TYPE_INT color bits = { 4, 8, 24 }
 // Returns:   TYPE_STR ansi escape sequence
 //            TYPE_ERR E_RANGE
-// Testing:   ;player:tell(tostr(ansi24_set_color_bits(4)))
-//            ;player:tell(tostr(ansi24_set_foreground(1)))
+// Testing:   ;player:tell(tostr(ansi24_set_color_bits(0, 4)))
+//            ;player:tell(tostr(ansi24_set_foreground(0, 1)))
 //            ;player:tell(replace_substring(ansi24_named_sequence("red"), chr(27), "{esc}"))
-//            ;player:tell(tostr(ansi24_set_color_bits(8)))
-//            ;player:tell(replace_substring(ansi24_named_sequence("red", 0), chr(27), "{esc}"))
-//            ;player:tell(replace_substring(ansi24_named_sequence("red", 1, 24), chr(27), "{esc}"))
-//            ;player:tell(replace_substring(ansi24_named_sequence("red", 1, 42), chr(27), "{esc}"))
-//            ;player:tell(replace_substring(ansi24_named_sequence("1", 1, 4), chr(27), "{esc}"))
-//            ;player:tell(replace_substring(ansi24_named_sequence("1", 1, 8), chr(27), "{esc}"))
-//            ;player:tell(replace_substring(ansi24_named_sequence("191.0.0", 1, 24), chr(27), "{esc}"))
+//            ;player:tell(tostr(ansi24_set_color_bits(0, 8)))
+//            ;player:tell(replace_substring(ansi24_named_sequence("red", 0, 0), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_named_sequence("red", 0, 1, 24), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_named_sequence("red", 0, 1, 42), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_named_sequence("1", 0, 1, 4), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_named_sequence("1", 0, 1, 8), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_named_sequence("191.0.0", 0, 1, 24), chr(27), "{esc}"))
+//            ;player:tell(tostr(ansi24_set_color_bits(24, 24)))
+//            ;player:tell(tostr(ansi24_set_foreground(24,  0)))
+//            ;player:tell(replace_substring(ansi24_named_sequence("191.0.0", 24), chr(27), "{esc}"))
+//            ;player:tell(tostr(ansi24_remove_modes(24)))
+//            ;player:tell(replace_substring(ansi24_named_sequence("191.0.0", 24), chr(27), "{esc}"))
 static package
 bf_ansi24_named_sequence(Var arglist, Byte next, void *vdata, Objid progr)
 {
     Var         rv;
     const int   nargs      = (int) arglist.v.list[0].v.num;
     const char  *name      = arglist.v.list[1].v.str;
-    ansi_modes  foreground =   (nargs >= 2)
-                             ? (arglist.v.list[2].v.num ? ansi_fore : ansi_back)
+    uint64_t    id         =   (nargs >= 2)
+                             ? (uint64_t) arglist.v.list[2].v.num
+                             : 0;
+    ansi_modes  foreground =   (nargs >= 3)
+                             ? (arglist.v.list[3].v.num ? ansi_fore : ansi_back)
                              : ansi_default;
-    ansi_modes  color_bits =   (nargs >= 3)
-                             ? (ansi_modes) arglist.v.list[3].v.num
+    ansi_modes  color_bits =   (nargs >= 4)
+                             ? (ansi_modes) arglist.v.list[4].v.num
                              : ansi_default;
     ansi_string sequence;
 
-    if (create_ansi_string(sequence, name, foreground, color_bits)) {
+    if (create_ansi_string(sequence, name, id, foreground, color_bits)) {
         rv.type  = TYPE_STR;
         rv.v.str = str_dup(sequence.buf);
     }
@@ -1681,7 +1762,7 @@ bf_ansi24_named_sequence(Var arglist, Byte next, void *vdata, Objid progr)
 // Arguments: TYPE_INT ansi SGR code = { 0..255 }
 // Returns:   TYPE_STR ansi escape sequence
 //            TYPE_ERR E_RANGE
-// Testing:   ;player:tell(tostr(ansi24_set_foreground(1)))
+// Testing:   ;player:tell(tostr(ansi24_set_foreground(0, 1)))
 //            ;player:tell(replace_substring(ansi24_4bit_sequence(32), chr(27), "{esc}"))
 //            ;player:tell(replace_substring(ansi24_4bit_sequence(256), chr(27), "{esc}"))
 
@@ -1710,28 +1791,37 @@ bf_ansi24_4bit_sequence(Var arglist, Byte next, void *vdata, Objid progr)
 // -----------------------------------------------------------------------------
 // Create an ansi escape sequence from a numeric value
 // Arguments: TYPE_INT ansi palette index = { 0..255 }
+//            {optional} TYPE_INT id,
 //            {optional} TYPE_INT foreground = { 1, 0 }
 // Returns:   TYPE_STR ansi escape sequence
 //            TYPE_ERR E_RANGE
-// Testing:   ;player:tell(tostr(ansi24_set_foreground(1)))
+// Testing:   ;player:tell(tostr(ansi24_set_foreground(0, 1)))
 //            ;player:tell(replace_substring(ansi24_8bit_sequence(2), chr(27), "{esc}"))
-//            ;player:tell(replace_substring(ansi24_8bit_sequence(2, 42), chr(27), "{esc}"))
-//            ;player:tell(replace_substring(ansi24_8bit_sequence(2, 0), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_8bit_sequence(2, 0, 0), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_8bit_sequence(2, 0, 42), chr(27), "{esc}"))
 //            ;player:tell(replace_substring(ansi24_8bit_sequence(256), chr(27), "{esc}"))
+//            ;player:tell(tostr(ansi24_set_foreground(4, 0)))
+//            ;player:tell(replace_substring(ansi24_8bit_sequence(2, 4), chr(27), "{esc}"))
+//            ;player:tell(tostr(ansi24_remove_modes(4)))
+//            ;player:tell(replace_substring(ansi24_8bit_sequence(2, 4), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_8bit_sequence(2, 4, 0), chr(27), "{esc}"))
 static package
 bf_ansi24_8bit_sequence(Var arglist, Byte next, void *vdata, Objid progr)
 {
     Var         rv;
     const int   nargs      = (int) arglist.v.list[0].v.num;
     const int   pal        = (int) arglist.v.list[1].v.num;
-    ansi_modes  foreground =   (nargs >= 2)
-                             ? (arglist.v.list[2].v.num ? ansi_fore : ansi_back)
+    uint64_t    id         =   (nargs >= 2)
+                             ? (uint64_t) arglist.v.list[2].v.num
+                             : 0;
+    ansi_modes  foreground =   (nargs >= 3)
+                             ? (arglist.v.list[3].v.num ? ansi_fore : ansi_back)
                              : ansi_default;
     ansi_string sequence;
 
     if (    pal >= 0
          && pal <= 255
-         && create_ansi8_string(sequence, (uint8_t) pal, foreground)) {
+         && create_ansi8_string(sequence, (uint8_t) pal, id, foreground)) {
         rv.type  = TYPE_STR;
         rv.v.str = str_dup(sequence.buf);
     }
@@ -1749,16 +1839,22 @@ bf_ansi24_8bit_sequence(Var arglist, Byte next, void *vdata, Objid progr)
 // Arguments: TYPE_INT red   component = { 0..255 }
 //            TYPE_INT green component = { 0..255 }
 //            TYPE_INT blue  component = { 0..255 }
+//            {optional} TYPE_INT id,
 //            {optional} TYPE_INT foreground = { 1, 0 }
 // Returns:   TYPE_STR ansi escape sequence
 //            TYPE_ERR E_RANGE
-// Testing:   ;player:tell(tostr(ansi24_set_foreground(1)))
+// Testing:   ;player:tell(tostr(ansi24_set_foreground(0, 1)))
 //            ;player:tell(replace_substring(ansi24_24bit_sequence(191, 0, 0), chr(27), "{esc}"))
-//            ;player:tell(replace_substring(ansi24_24bit_sequence(0, 191, 0, 42), chr(27), "{esc}"))
-//            ;player:tell(replace_substring(ansi24_24bit_sequence(0, 0, 191, 0), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_24bit_sequence(0, 0, 191, 0, 0), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_24bit_sequence(0, 191, 0, 0, 42), chr(27), "{esc}"))
 //            ;player:tell(replace_substring(ansi24_24bit_sequence(256, 0, 0), chr(27), "{esc}"))
 //            ;player:tell(replace_substring(ansi24_24bit_sequence(0, 256, 0), chr(27), "{esc}"))
 //            ;player:tell(replace_substring(ansi24_24bit_sequence(0, 0, 256), chr(27), "{esc}"))
+//            ;player:tell(tostr(ansi24_set_foreground(4, 0)))
+//            ;player:tell(replace_substring(ansi24_24bit_sequence(191, 0, 0, 4), chr(27), "{esc}"))
+//            ;player:tell(tostr(ansi24_remove_modes(4)))
+//            ;player:tell(replace_substring(ansi24_24bit_sequence(191, 0, 0, 4), chr(27), "{esc}"))
+//            ;player:tell(replace_substring(ansi24_24bit_sequence(191, 0, 0, 4, 0), chr(27), "{esc}"))
 static package
 bf_ansi24_24bit_sequence(Var arglist, Byte next, void *vdata, Objid progr)
 {
@@ -1767,8 +1863,11 @@ bf_ansi24_24bit_sequence(Var arglist, Byte next, void *vdata, Objid progr)
     const int   red        = (int) arglist.v.list[1].v.num;
     const int   green      = (int) arglist.v.list[2].v.num;
     const int   blue       = (int) arglist.v.list[3].v.num;
-    ansi_modes  foreground =   (nargs >= 4)
-                             ? (arglist.v.list[4].v.num ? ansi_fore : ansi_back)
+    uint64_t    id         =   (nargs >= 4)
+                             ? (uint64_t) arglist.v.list[4].v.num
+                             : 0;
+    ansi_modes  foreground =   (nargs >= 5)
+                             ? (arglist.v.list[5].v.num ? ansi_fore : ansi_back)
                              : ansi_default;
     ansi_string sequence;
 
@@ -1782,6 +1881,7 @@ bf_ansi24_24bit_sequence(Var arglist, Byte next, void *vdata, Objid progr)
                                  (uint8_t) red,
                                  (uint8_t) green,
                                  (uint8_t) blue,
+                                 id,
                                  foreground)) {
         rv.type  = TYPE_STR;
         rv.v.str = str_dup(sequence.buf);
@@ -1799,19 +1899,24 @@ bf_ansi24_24bit_sequence(Var arglist, Byte next, void *vdata, Objid progr)
 // Several of the tag functions differ only by a function called,
 // implement them with common code
 // Arguments: TYPE_STR string to perform func() on
+//            {optional} TYPE_INT id,
 // Returns:   TYPE_STR string returned by func()
 //            TYPE_ERR E_RANGE
 static package
 replace_remove_tags(Var arglist, Byte next, void *vdata, Objid progr,
-                    bool (*func) (char *, size_t, const char *)) {
+                    bool (*func) (char *, size_t, const char *, uint64_t)) {
     // This is a private function so its safe to require that
     // pointers have been checked for null by the caller
     
     Var        rv;
+    const int  nargs     = (int) arglist.v.list[0].v.num;
     const char *original = arglist.v.list[1].v.str;
+    uint64_t   id        =   (nargs >= 2)
+                           ? (uint64_t) arglist.v.list[2].v.num
+                           : 0;
     char       replacement[256];
     
-    if (func(replacement, sizeof(replacement), original)) {
+    if (func(replacement, sizeof(replacement), original, id)) {
         rv.type  = TYPE_STR;
         rv.v.str = str_dup(replacement);
     }
@@ -1827,9 +1932,15 @@ replace_remove_tags(Var arglist, Byte next, void *vdata, Objid progr,
 // -----------------------------------------------------------------------------
 // Replace tags with ansi escape sequqnces
 // Arguments: TYPE_STR string with color tags
+//            TYPE_INT id
 // Returns:   TYPE_STR string with ansi escape sequences
 //            TYPE_ERR E_RANGE
-// Testing:   ;player:tell(ansi24_replace_tags("The [red]red dog[normal] [bright][blink]barks[normal]."))
+// Testing:   ;player:tell(tostr(ansi24_set_color_bits(0, 8)))
+//            ;player:tell(tostr(ansi24_set_foreground(0, 1)))
+//            ;player:tell(tostr(ansi24_set_color_bits(4, 4)))
+//            ;player:tell(tostr(ansi24_set_foreground(4, 0)))
+//            ;player:tell(ansi24_replace_tags("The [red]red dog[normal] [bright][blink]barks[normal].", 0))
+//            ;player:tell(ansi24_replace_tags("The [red]red dog[normal] [bright][blink]barks[normal].", 4))
 static package
 bf_ansi24_replace_tags(Var arglist, Byte next, void *vdata, Objid progr)
 {
@@ -1855,7 +1966,7 @@ bf_ansi24_remove_tags(Var arglist, Byte next, void *vdata, Objid progr)
 // Arguments: TYPE_STR string with ansi escape sequences
 // Returns:   TYPE_STR string with no ansi escape sequences
 //            TYPE_ERR E_RANGE
-// Testing:   ;player:tell(ansi24_remove_sequences(ansi24_replace_tags("The [red]red dog[normal] [bright][blink]barks[normal].")))
+// Testing:   ;player:tell(ansi24_remove_sequences(ansi24_replace_tags("The [red]red dog[normal] [bright][blink]barks[normal].", 0)))
 static package
 bf_ansi24_remove_sequences(Var arglist, Byte next, void *vdata, Objid progr)
 {
@@ -1871,11 +1982,11 @@ bf_ansi24_remove_sequences(Var arglist, Byte next, void *vdata, Objid progr)
 //            {optional} TYPE_INT caseless comparison = { 1, 0 }
 // Returns:   TYPE_STR updated string
 //            TYPE_ERR E_RANGE
-// Testing:   ;player:tell(replace_substring(ansi24_replace_tags("The [red]red dog[normal] [bright][blink]barks[normal]."), "barks", "wags its tail"))
-//            ;player:tell(replace_substring(ansi24_replace_tags("The [red]red dog[normal] [bright][blink]barks[normal]."), "barks", "wags its tail", 0))
-//            ;player:tell(replace_substring(ansi24_replace_tags("The [red]red dog[normal] [bright][blink]barks[normal]."), "barks", "wags its tail", 1))
-//            ;player:tell(replace_substring(ansi24_replace_tags("The [red]red dog[normal] [bright][blink]barks[normal]."), "BARKS", "wags its tail", 1))
-//            ;player:tell(replace_substring(ansi24_replace_tags("The [red]red dog[normal] [bright][blink]barks[normal]."), "BARKS", "wags its tail", 0))
+// Testing:   ;player:tell(replace_substring(ansi24_replace_tags("The [red]red dog[normal] [bright][blink]barks[normal].", 0), "barks", "wags its tail"))
+//            ;player:tell(replace_substring(ansi24_replace_tags("The [red]red dog[normal] [bright][blink]barks[normal].", 0), "barks", "wags its tail", 0))
+//            ;player:tell(replace_substring(ansi24_replace_tags("The [red]red dog[normal] [bright][blink]barks[normal].", 0), "barks", "wags its tail", 1))
+//            ;player:tell(replace_substring(ansi24_replace_tags("The [red]red dog[normal] [bright][blink]barks[normal].", 0), "BARKS", "wags its tail", 1))
+//            ;player:tell(replace_substring(ansi24_replace_tags("The [red]red dog[normal] [bright][blink]barks[normal].", 0), "BARKS", "wags its tail", 0))
 static package
 bf_replace_substring(Var arglist, Byte next, void *vdata, Objid progr) {
     Var        rv;
@@ -2221,11 +2332,12 @@ register_ansi24(void)
     register_function("ansi24_is_foreground",    1,  1, bf_ansi24_is_foreground, TYPE_INT);
     register_function("ansi24_set_color_bits",   2,  2, bf_ansi24_set_color_bits, TYPE_INT, TYPE_INT);
     register_function("ansi24_set_foreground",   2,  2, bf_ansi24_set_foreground, TYPE_INT, TYPE_INT);
-    register_function("ansi24_named_sequence",   1,  3, bf_ansi24_named_sequence, TYPE_STR, TYPE_INT, TYPE_INT);
+    register_function("ansi24_remove_modes",     1,  1, bf_ansi24_remove_modes, TYPE_INT);
+    register_function("ansi24_named_sequence",   1,  4, bf_ansi24_named_sequence, TYPE_STR, TYPE_INT, TYPE_INT, TYPE_INT);
     register_function("ansi24_4bit_sequence",    1,  1, bf_ansi24_4bit_sequence, TYPE_INT);
-    register_function("ansi24_8bit_sequence",    1,  2, bf_ansi24_8bit_sequence, TYPE_INT, TYPE_INT);
-    register_function("ansi24_24bit_sequence",   3,  4, bf_ansi24_24bit_sequence, TYPE_INT, TYPE_INT, TYPE_INT, TYPE_INT);
-    register_function("ansi24_replace_tags",     1,  1, bf_ansi24_replace_tags, TYPE_STR);
+    register_function("ansi24_8bit_sequence",    1,  3, bf_ansi24_8bit_sequence, TYPE_INT, TYPE_INT, TYPE_INT);
+    register_function("ansi24_24bit_sequence",   3,  5, bf_ansi24_24bit_sequence, TYPE_INT, TYPE_INT, TYPE_INT, TYPE_INT, TYPE_INT);
+    register_function("ansi24_replace_tags",     2,  2, bf_ansi24_replace_tags, TYPE_STR, TYPE_INT);
     register_function("ansi24_remove_tags",      1,  1, bf_ansi24_remove_tags, TYPE_STR);
     register_function("ansi24_remove_sequences", 1,  1, bf_ansi24_remove_sequences, TYPE_STR);
     register_function("ansi24_printf",           1, -1, bf_ansi24_printf, TYPE_STR);

@@ -31,6 +31,7 @@ ansi_modes set_ansi_foreground_mode (uint64_t id, ansi_modes mode);
 
 bool create_ansi_string   (ansi_string &string,
                            const char  *name,
+                           uint64_t    id         = 0,
                            ansi_modes  foreground = ansi_default,
                            ansi_modes  color_bits = ansi_default);
 
@@ -39,22 +40,26 @@ bool create_ansi4_string  (ansi_string &string,
 
 bool create_ansi8_string  (ansi_string &string,
                            uint8_t     palette_index,
+                           uint64_t    id         = 0,
                            ansi_modes  foreground = ansi_default);
 
 bool create_ansi24_string (ansi_string &string,
                            uint8_t     red,
                            uint8_t     green,
                            uint8_t     blue,
+                           uint64_t    id         = 0,
                            ansi_modes  foreground = ansi_default);
 
 inline
 bool create_ansi24_string (ansi_string &string,
                            uint32_t    rgb,
+                           uint64_t    id         = 0,
                            ansi_modes  foreground = ansi_default) {
     return create_ansi24_string(string,
                                 (rgb >> 16) & 0xff,
                                 (rgb >>  8) & 0xff,
                                  rgb        & 0xff,
+                                id,
                                 foreground);
 }
 
@@ -64,15 +69,18 @@ bool create_ansi24_string (ansi_string &string,
 
 bool replace_color_tags_with_ansi (char       *replacement,
                                    size_t     size,
-                                   const char *original);
+                                   const char *original,
+                                   uint64_t   id = 0);
 
 bool remove_color_tags            (char       *replacement,
                                    size_t     size,
-                                   const char *original);
+                                   const char *original,
+                                   uint64_t);
 
 bool remove_ansi_sequences        (char       *replacement,
                                    size_t     size,
-                                   const char *original);
+                                   const char *original,
+                                   uint64_t);
 
 // -----------------------------------------------------------------------------
 // Show the supported named colors and the 8-bit palette
