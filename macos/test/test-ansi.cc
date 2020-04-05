@@ -84,7 +84,8 @@ void test_replace_ansi(const char *expected,
     if (remove_tags) {
         if (remove_color_tags(replacement,
                               sizeof(replacement),
-                              original)) {
+                              original,
+                              0)) {
             compare_to_expected(expected, replacement);
         }
         else
@@ -93,7 +94,8 @@ void test_replace_ansi(const char *expected,
     else if (remove_ansi) {
         if (remove_ansi_sequences(replacement,
                                   sizeof(replacement),
-                                  original)) {
+                                  original,
+                                  0)) {
             compare_to_expected(expected, replacement);
         }
         else
@@ -435,24 +437,24 @@ int main(void) {
     if (   (! replace_color_tags_with_ansi(buffer, sizeof(buffer), ""))
         || buffer[0] != 0)
         cout << "  replace_color_tags_with_ansi() original empty test failed" << endl;
-    if (remove_color_tags(nullptr, 1, ""))
+    if (remove_color_tags(nullptr, 1, "", 0))
         cout << "  remove_color_tags() buffer nullptr test failed" << endl;
-    if (remove_color_tags(buffer, sizeof(buffer), nullptr))
+    if (remove_color_tags(buffer, sizeof(buffer), nullptr, 0))
         cout << "  remove_color_tags() original nullptr test failed" << endl;
-    if (remove_color_tags(buffer, 0, ""))
+    if (remove_color_tags(buffer, 0, "", 0))
         cout << "  remove_color_tags() buffer size 0 test failed" << endl;
     buffer[0] = 1;
-    if (   (! remove_color_tags(buffer, sizeof(buffer), ""))
+    if (   (! remove_color_tags(buffer, sizeof(buffer), "", 0))
         || buffer[0] != 0)
         cout << "  remove_color_tags() original empty test failed" << endl;
-    if (remove_ansi_sequences(nullptr, 1, ""))
+    if (remove_ansi_sequences(nullptr, 1, "", 0))
         cout << "  remove_ansi_sequences() buffer nullptr test failed" << endl;
-    if (remove_ansi_sequences(buffer, sizeof(buffer), nullptr))
+    if (remove_ansi_sequences(buffer, sizeof(buffer), nullptr, 0))
         cout << "  remove_ansi_sequences() original nullptr test failed" << endl;
-    if (remove_ansi_sequences(buffer, 0, ""))
+    if (remove_ansi_sequences(buffer, 0, "", 0))
         cout << "  remove_ansi_sequences() buffer size 0 test failed" << endl;
     buffer[0] = 1;
-    if (   (! remove_ansi_sequences(buffer, sizeof(buffer), ""))
+    if (   (! remove_ansi_sequences(buffer, sizeof(buffer), "", 0))
         || buffer[0] != 0)
         cout << "  remove_ansi_sequences() original empty test failed" << endl;
 
@@ -790,13 +792,13 @@ int main(void) {
     strncpy(buffer,
             "This is a test of 4-bit 𐍈[red]\xf0\x90\x8d\x88red[normal], [faint][green]faint green[normal] and [under][blink][blue]underlined blinking blue[normal] and a [mismatch].",
             sizeof(buffer));
-    if (   (! remove_color_tags(buffer, sizeof(buffer), buffer))
+    if (   (! remove_color_tags(buffer, sizeof(buffer), buffer, 0))
         || strcmp(buffer, "This is a test of 4-bit 𐍈𐍈red, faint green and underlined blinking blue and a [mismatch].") != 0)
         cout << "  remove_color_tags() destination is source test failed" << endl;
     strncpy(buffer,
             "This is a test of 4-bit 𐍈\x1b[31m\xf0\x90\x8d\x88red\x1b[0m, 8-bit \x1b[38;5;2mgreen\x1b[0m and 24-bit \x1b[38;2;0;0;191mblue\x1b[0m ansi escape sequences.",
             sizeof(buffer));
-    if (   (! remove_ansi_sequences(buffer, sizeof(buffer), buffer))
+    if (   (! remove_ansi_sequences(buffer, sizeof(buffer), buffer, 0))
         || strcmp(buffer, "This is a test of 4-bit 𐍈𐍈red, 8-bit green and 24-bit blue ansi escape sequences.") != 0)
         cout << "  remove_ansi_sequences() destination is source test failed" << endl;
 
